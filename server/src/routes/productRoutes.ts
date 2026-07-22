@@ -5,6 +5,7 @@ import {
   getProducts,
   getProductBySlug,
   createProduct,
+  updateProduct,
   deleteProduct,
 } from '../controllers/productController';
 import { authenticateJWT, authorizeRoles } from '../middleware/auth';
@@ -17,7 +18,7 @@ router.get('/collections', getCollections);
 router.post(
   '/collections',
   authenticateJWT,
-  authorizeRoles('admin', 'manager'),
+  authorizeRoles('admin', 'manager', 'product_manager', 'super_admin'),
   upload.single('image'),
   createCollection
 );
@@ -28,10 +29,11 @@ router.get('/:slug', getProductBySlug);
 router.post(
   '/',
   authenticateJWT,
-  authorizeRoles('admin', 'manager'),
+  authorizeRoles('admin', 'manager', 'product_manager', 'super_admin'),
   upload.array('images', 5),
   createProduct
 );
-router.delete('/:id', authenticateJWT, authorizeRoles('admin'), deleteProduct);
+router.put('/:id', authenticateJWT, authorizeRoles('admin', 'manager', 'product_manager', 'super_admin'), updateProduct);
+router.delete('/:id', authenticateJWT, authorizeRoles('admin', 'super_admin'), deleteProduct);
 
 export default router;

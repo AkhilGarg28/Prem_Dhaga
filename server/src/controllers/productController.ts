@@ -43,11 +43,29 @@ export const createCollection = async (req: Request, res: Response) => {
 // --- PRODUCTS ---
 export const getProducts = async (req: Request, res: Response) => {
   try {
-    const { collectionSlug, search, featured } = req.query;
+    const { collectionSlug, search, featured, tags, minPrice, maxPrice, status } = req.query;
     const query: any = {};
+
+    if (status) {
+      query.status = status;
+    } else if (process.env.NODE_ENV === 'production') {
+      // Default to active products only for public catalog in production
+      query.status = 'active';
+    }
 
     if (featured === 'true') {
       query.isFeatured = true;
+    }
+
+    if (tags) {
+      const tagList = (tags as string).split(',').map((t) => t.trim());
+      query.tags = { $in: tagList };
+    }
+
+    if (minPrice || maxPrice) {
+      query.basePrice = {};
+      if (minPrice) query.basePrice.$gte = Number(minPrice);
+      if (maxPrice) query.basePrice.$lte = Number(maxPrice);
     }
 
     if (collectionSlug) {
@@ -55,16 +73,16 @@ export const getProducts = async (req: Request, res: Response) => {
       if (col) {
         query.collectionId = col._id;
       } else {
-        // Collection not found, return empty array
         return res.status(200).json([]);
       }
     }
 
     if (search) {
-      // Atlas search fallback or simple regex search
       query.$or = [
         { name: { $regex: search as string, $options: 'i' } },
         { description: { $regex: search as string, $options: 'i' } },
+        { tags: { $regex: search as string, $options: 'i' } },
+        { sku: { $regex: search as string, $options: 'i' } },
       ];
     }
 
@@ -87,17 +105,28 @@ export const getProductBySlug = async (req: Request, res: Response) => {
 
 export const createProduct = async (req: Request, res: Response) => {
   try {
-    const { name, description, basePrice, collectionId, sizes, swatches, isFeatured, stock } = req.body;
+    const {
+      name,
+      slug,
+      description,
+      basePrice,
+      discountPrice,
+      collectionId,
+      stock,
+      sizes,
+      swatches,
+      isFeatured,
+      isTrending,
+      isBestSeller,
+      material,
+      fabric,
+      weight,
+      barcode,
+      gstRate,
+      status,
+      tags,
+    } = req.body;
 
-    if (!name || !basePrice || !collectionId) {
-      return res.status(400).json({ error: 'Name, basePrice, and collectionId are required' });
-    }
-
-    const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-    const existing = await Product.findOne({ slug });
-    if (existing) return res.status(400).json({ error: 'Product with this name already exists' });
-
-    // Handle files if uploaded
     const imageUrls: string[] = [];
     if (req.files && Array.isArray(req.files)) {
       for (const file of req.files) {
@@ -106,40 +135,51 @@ export const createProduct = async (req: Request, res: Response) => {
       }
     }
 
-    // Parse structures if they are sent as JSON strings
     const parsedSizes = typeof sizes === 'string' ? JSON.parse(sizes) : sizes;
     const parsedSwatches = typeof swatches === 'string' ? JSON.parse(swatches) : swatches;
+    const parsedTags = typeof tags === 'string' ? JSON.parse(tags) : tags;
 
     const product = new Product({
       name,
-      slug,
+      slug: slug || name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       description,
       basePrice,
-      images: imageUrls.length > 0 ? imageUrls : ['https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=600&auto=format&fit=crop'],
-      collectionId,
+      discountPrice: discountPrice ? Number(discountPrice) : undefined,
+      images: imageUrls.length > 0 ? imageUrls : req.body.images || ['https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=600&auto=format&fit=crop'],
+      collectionId: collectionId || (await Collection.findOne())?._id,
       sizes: parsedSizes || [
         { size: 0, price: basePrice },
-        { size: 1, price: Number(basePrice) + 100 },
-        { size: 2, price: Number(basePrice) + 200 },
-        { size: 3, price: Number(basePrice) + 300 },
-        { size: 4, price: Number(basePrice) + 400 },
-        { size: 5, price: Number(basePrice) + 500 },
-        { size: 6, price: Number(basePrice) + 600 },
-        { size: 7, price: Number(basePrice) + 700 },
-        { size: 8, price: Number(basePrice) + 800 },
+        { size: 1, price: Number(basePrice) + 150 },
+        { size: 2, price: Number(basePrice) + 300 },
+        { size: 3, price: Number(basePrice) + 450 },
+        { size: 4, price: Number(basePrice) + 600 },
       ],
-      swatches: parsedSwatches || [
-        { name: 'Vrindavan Green', hex: '#3B6B3B' },
-        { name: 'Lotus Pink', hex: '#D4788A' },
-        { name: 'Royal Gold', hex: '#C9A84C' },
-        { name: 'Peacock Blue', hex: '#1B5E6E' },
-      ],
+      swatches: parsedSwatches || [{ name: 'Royal Gold', hex: '#C9A84C' }],
       isFeatured: isFeatured === 'true' || isFeatured === true,
+      isTrending: isTrending === 'true' || isTrending === true,
+      isBestSeller: isBestSeller === 'true' || isBestSeller === true,
       stock: stock ? Number(stock) : 10,
+      weight: weight ? Number(weight) : 200,
+      material,
+      fabric,
+      barcode,
+      gstRate: gstRate ? Number(gstRate) : 12,
+      status: status || 'active',
+      tags: parsedTags || [],
     });
 
     await product.save();
     return res.status(201).json(product);
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateProduct = async (req: Request, res: Response) => {
+  try {
+    const updated = await Product.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!updated) return res.status(404).json({ error: 'Product not found' });
+    return res.status(200).json(updated);
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }

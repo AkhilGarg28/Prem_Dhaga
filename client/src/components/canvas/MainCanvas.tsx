@@ -6,25 +6,25 @@ import DeityScene from './DeityScene';
 import LotusRain from './LotusRain';
 import GoldenParticles from './GoldenParticles';
 
-export const MainCanvas = () => {
+export const MainCanvas = ({ className = '' }: { className?: string }) => {
   return (
-    <div className="fixed inset-0 w-full h-full pointer-events-none z-0">
+    <div className={`absolute inset-0 h-full w-full pointer-events-none ${className}`}>
       <Canvas
-        shadows
+        dpr={[1, 1.5]}
+        shadows={false}
         camera={{ fov: 45, near: 0.1, far: 50, position: [0, 2.5, 9] }}
-        gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true }}
+        gl={{ antialias: false, alpha: true, preserveDrawingBuffer: false, powerPreference: 'high-performance' }}
+        performance={{ min: 0.55 }}
         onCreated={({ gl }) => {
-          gl.setClearColor(0x0d0b08, 1); // #0D0B08 (temple black)
+          gl.setClearColor(0x0d0b08, 0);
         }}
       >
-        {/* Meditative floating particles (Golden dust and Lotus petal rain) */}
-        <GoldenParticles count={400} />
-        <LotusRain count={120} />
-
-        {/* Dynamic 3D Scene */}
+        <GoldenParticles count={180} />
+        <LotusRain count={45} />
         <DeityScene />
       </Canvas>
     </div>
   );
 };
+
 export default MainCanvas;

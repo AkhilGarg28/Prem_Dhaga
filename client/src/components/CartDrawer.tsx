@@ -1,168 +1,151 @@
 'use client';
 
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '../store/useCart';
 import { Icons } from './Icons';
 
 export const CartDrawer = () => {
   const { items, isOpen, setIsOpen, updateQuantity, removeItem, getCartTotal } = useCart();
+  const totalAmount = getCartTotal();
 
   const handleClose = () => setIsOpen(false);
-  const totalAmount = getCartTotal();
 
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop Overlay */}
-          <motion.div
+          <motion.button
+            type="button"
+            aria-label="Close seva basket"
             initial={{ opacity: 0 }}
-            animate={{ opacity: 0.6 }}
+            animate={{ opacity: 0.68 }}
             exit={{ opacity: 0 }}
             onClick={handleClose}
-            className="fixed inset-0 bg-temple-black z-50 cursor-pointer"
+            className="fixed inset-0 z-50 cursor-default bg-temple-black"
           />
 
-          {/* Cart Drawer Panel (Right Side Slide) */}
-          <motion.div
+          <motion.aside
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-            className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-deep-charcoal border-l border-royal-gold/25 z-50 flex flex-col shadow-2xl"
+            transition={{ type: 'spring', damping: 28, stiffness: 210 }}
+            className="fixed bottom-0 right-0 top-0 z-50 flex w-full max-w-[480px] flex-col overflow-hidden border-l border-royal-gold/22 bg-[#100d09] shadow-[0_0_110px_rgba(0,0,0,.55)]"
+            aria-label="Seva basket"
           >
-            {/* Header */}
-            <div className="p-6 border-b border-royal-gold/15 flex justify-between items-center bg-temple-black">
-              <div className="flex items-center gap-2">
-                <Icons.PeacockFeather className="text-royal-gold" size={20} />
-                <h2 className="font-display text-xl tracking-wider text-ivory">Your Offerings</h2>
+            <div className="absolute inset-0 temple-grain opacity-[0.18]" />
+            <div className="relative border-b border-royal-gold/12 bg-temple-black/72 p-6 backdrop-blur-xl">
+              <div className="flex items-center justify-between gap-5">
+                <div className="flex items-center gap-3">
+                  <Icons.PeacockFeather className="text-royal-gold" size={24} />
+                  <div>
+                    <h2 className="font-display text-2xl font-light tracking-normal text-ivory">Seva Basket</h2>
+                    <p className="mt-1 font-utility text-[8px] uppercase tracking-[0.24em] text-cream/38">Temple-packed checkout</p>
+                  </div>
+                </div>
+                <button onClick={handleClose} className="nav-icon" aria-label="Close basket">
+                  <Icons.Close size={21} />
+                </button>
               </div>
-              <button
-                onClick={handleClose}
-                className="p-1 hover:text-royal-gold transition-colors"
-                aria-label="Close Cart"
-              >
-                <Icons.Close size={24} />
-              </button>
             </div>
 
-            {/* Cart Items List */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="relative flex-1 overflow-y-auto p-6">
               {items.length === 0 ? (
-                <div className="h-full flex flex-col justify-center items-center text-center space-y-4">
-                  <Icons.PeacockFeather className="text-royal-gold/20 animate-pulse" size={64} />
-                  <p className="font-display text-lg text-warm-beige/60 italic">"The altar is empty."</p>
-                  <p className="font-body text-xs text-warm-beige/40">Select silk poshaks to offer your devotion.</p>
-                  <button
-                    onClick={handleClose}
-                    className="font-utility text-xs tracking-widest uppercase bg-royal-gold text-temple-black px-6 py-2 hover:bg-ivory transition-all"
-                  >
-                    Browse Collections
-                  </button>
+                <div className="flex h-full flex-col items-center justify-center text-center">
+                  <Icons.PeacockFeather className="text-royal-gold/22" size={70} />
+                  <p className="mt-7 font-display text-2xl font-light italic text-cream/68">The altar is waiting.</p>
+                  <p className="mt-3 max-w-xs font-body text-xs leading-6 text-cream/42">Select a poshak, mukut or seva set and we will keep it here for checkout.</p>
+                  <Link href="/collections" onClick={handleClose} className="particle-button luxury-button mt-8">
+                    Browse collections
+                  </Link>
                 </div>
               ) : (
-                items.map((item) => (
-                  <div
-                    key={`${item.productId}-${item.size}-${item.swatchHex}`}
-                    className="flex gap-4 border-b border-royal-gold/10 pb-6"
-                  >
-                    {/* Item Image */}
-                    <div className="w-20 h-24 bg-temple-black relative overflow-hidden border border-royal-gold/15 flex-shrink-0">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-
-                    {/* Item Details */}
-                    <div className="flex-1 flex flex-col justify-between">
-                      <div>
-                        <h3 className="font-display text-base text-ivory leading-tight">{item.name}</h3>
-                        <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-[11px] text-warm-beige/60 font-utility">
-                          <span>Size: {item.size}</span>
-                          <span className="flex items-center gap-1">
-                            Color:
-                            <span
-                              className="inline-block w-2.5 h-2.5 rounded-full border border-royal-gold/20"
-                              style={{ backgroundColor: item.swatchHex }}
-                            />
-                            {item.swatchName}
-                          </span>
-                        </div>
+                <div className="space-y-5">
+                  {items.map((item) => (
+                    <article key={`${item.productId}-${item.size}-${item.swatchHex}`} className="grid grid-cols-[88px_1fr] gap-4 border-b border-royal-gold/10 pb-5">
+                      <div className="relative h-28 overflow-hidden border border-royal-gold/14 bg-temple-black">
+                        <Image src={item.image} alt={item.name} fill sizes="88px" className="object-cover" />
                       </div>
 
-                      {/* Quantity Tweak & Remove */}
-                      <div className="flex items-center justify-between mt-2">
-                        <div className="flex items-center border border-royal-gold/20">
-                          <button
-                            onClick={() => updateQuantity(item.productId, item.size, item.swatchHex, item.quantity - 1)}
-                            className="px-2 py-0.5 text-warm-beige hover:text-royal-gold transition-colors"
-                          >
-                            -
-                          </button>
-                          <span className="px-2 text-xs font-utility text-ivory">{item.quantity}</span>
-                          <button
-                            onClick={() => updateQuantity(item.productId, item.size, item.swatchHex, item.quantity + 1)}
-                            className="px-2 py-0.5 text-warm-beige hover:text-royal-gold transition-colors"
-                          >
-                            +
-                          </button>
+                      <div className="min-w-0 space-y-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <h3 className="font-display text-xl font-light leading-tight text-ivory">{item.name}</h3>
+                            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 font-utility text-[9px] uppercase tracking-[0.14em] text-cream/42">
+                              <span>Size {item.size}</span>
+                              <span className="flex items-center gap-1.5">
+                                <span className="h-2.5 w-2.5 rounded-full border border-royal-gold/25" style={{ backgroundColor: item.swatchHex }} />
+                                {item.swatchName}
+                              </span>
+                            </div>
+                          </div>
+                          <span className="shrink-0 font-utility text-[10px] uppercase tracking-[0.16em] text-royal-gold">INR {item.price * item.quantity}</span>
                         </div>
 
-                        <button
-                          onClick={() => removeItem(item.productId, item.size, item.swatchHex)}
-                          className="text-warm-beige/50 hover:text-lotus-pink transition-colors p-1"
-                          aria-label="Remove item"
-                        >
-                          <Icons.Trash size={16} />
-                        </button>
-                      </div>
-                    </div>
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="grid grid-cols-3 border border-royal-gold/18 font-utility text-xs text-cream">
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.productId, item.size, item.swatchHex, item.quantity - 1)}
+                              className="grid h-9 w-9 place-items-center text-cream/58 transition hover:text-royal-gold"
+                              aria-label={`Decrease ${item.name} quantity`}
+                            >
+                              -
+                            </button>
+                            <span className="grid h-9 w-9 place-items-center border-x border-royal-gold/12">{item.quantity}</span>
+                            <button
+                              type="button"
+                              onClick={() => updateQuantity(item.productId, item.size, item.swatchHex, item.quantity + 1)}
+                              className="grid h-9 w-9 place-items-center text-cream/58 transition hover:text-royal-gold"
+                              aria-label={`Increase ${item.name} quantity`}
+                            >
+                              +
+                            </button>
+                          </div>
 
-                    {/* Item Price */}
-                    <div className="text-right flex flex-col justify-between items-end">
-                      <span className="font-utility text-xs text-royal-gold">₹{item.price * item.quantity}</span>
-                    </div>
-                  </div>
-                ))
+                          <button
+                            type="button"
+                            onClick={() => removeItem(item.productId, item.size, item.swatchHex)}
+                            className="grid h-9 w-9 place-items-center border border-royal-gold/12 text-cream/38 transition hover:border-lotus-pink/35 hover:text-lotus-pink"
+                            aria-label={`Remove ${item.name}`}
+                          >
+                            <Icons.Trash size={15} />
+                          </button>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
               )}
             </div>
 
-            {/* Footer Summary & Checkout */}
             {items.length > 0 && (
-              <div className="p-6 border-t border-royal-gold/15 bg-temple-black space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="font-utility text-xs tracking-wider text-warm-beige uppercase">Subtotal</span>
-                  <span className="font-display text-xl text-royal-gold">₹{totalAmount}</span>
+              <div className="relative border-t border-royal-gold/12 bg-temple-black/74 p-6 backdrop-blur-xl">
+                <div className="space-y-3 border-b border-royal-gold/10 pb-5">
+                  <div className="flex justify-between font-utility text-[10px] uppercase tracking-[0.2em] text-cream/48">
+                    <span>Subtotal</span>
+                    <span className="text-royal-gold">INR {totalAmount}</span>
+                  </div>
+                  <p className="font-body text-[11px] leading-5 text-cream/38">Taxes, courier and gifting details are confirmed in checkout. Every order is packed from the atelier.</p>
                 </div>
-                <p className="text-[10px] text-warm-beige/40 italic">
-                  Crafted by hand in Vrindavan. Taxes and shipping calculated at checkout.
-                </p>
-
-                <div className="grid grid-cols-1 gap-2 pt-2">
-                  <Link
-                    href="/checkout"
-                    onClick={handleClose}
-                    className="font-utility text-xs tracking-widest uppercase bg-royal-gold hover:bg-cream text-temple-black py-3 text-center transition-all block font-medium"
-                  >
-                    Proceed to Devotion (Checkout)
+                <div className="mt-5 grid gap-3">
+                  <Link href="/checkout" onClick={handleClose} className="particle-button luxury-button text-center">
+                    Proceed to checkout
                   </Link>
-                  <button
-                    onClick={handleClose}
-                    className="font-utility text-xs tracking-widest uppercase border border-royal-gold/20 hover:border-royal-gold py-2 text-center text-warm-beige transition-all"
-                  >
-                    Continue Shopping
+                  <button onClick={handleClose} className="luxury-button-outline">
+                    Continue exploring
                   </button>
                 </div>
               </div>
             )}
-          </motion.div>
+          </motion.aside>
         </>
       )}
     </AnimatePresence>
   );
 };
+
 export default CartDrawer;
+

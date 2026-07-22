@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/store/useCart';
 import { Icons } from '@/components/Icons';
@@ -36,13 +37,61 @@ interface Product {
 
 export default function ProductDetailPage({ params }: { params: { slug: string } }) {
   const { addItem } = useCart();
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
+  
+  const mockCatalog: Record<string, Product> = {
+    'lotus-shringaar-poshak': {
+      _id: 'prod_1',
+      name: 'Lotus Shringaar Poshak',
+      slug: 'lotus-shringaar-poshak',
+      description: 'Handcrafted in Vrindavan with delicate lotus embroidery and fine golden borders. Woven with love on pure organic silk.',
+      basePrice: 1200,
+      images: ['/images/prem-dhaga-hero.png'],
+      sizes: Array.from({ length: 9 }).map((_, i) => ({ size: i, price: 1200 + i * 150 })),
+      swatches: [
+        { name: 'Vrindavan Green', hex: '#3B6B3B' },
+        { name: 'Lotus Pink', hex: '#D4788A' },
+        { name: 'Royal Gold', hex: '#C9A84C' },
+        { name: 'Peacock Blue', hex: '#1B5E6E' },
+      ],
+      collectionId: { title: 'Summer Silk Collection', slug: 'summer-silk' },
+    },
+    'morpankh-velvet-poshak': {
+      _id: 'prod_2',
+      name: 'Morpankh Velvet Poshak',
+      slug: 'morpankh-velvet-poshak',
+      description: 'Deep royal blue velvet poshak with detailed hand-embroidered peacock feathers. Ideal for cold seasons and grand afternoon darshans.',
+      basePrice: 2800,
+      images: ['/images/janmashtami-poshak.png'],
+      sizes: Array.from({ length: 9 }).map((_, i) => ({ size: i, price: 2800 + i * 150 })),
+      swatches: [
+        { name: 'Peacock Blue', hex: '#1B5E6E' },
+        { name: 'Royal Gold', hex: '#C9A84C' },
+        { name: 'Temple Bronze', hex: '#8B6914' },
+      ],
+      collectionId: { title: 'Rajbhog Royal Collection', slug: 'rajbhog-royal' },
+    },
+    'swarna-janmashtami-poshak': {
+      _id: 'prod_3',
+      name: 'Swarna Janmashtami Poshak',
+      slug: 'swarna-janmashtami-poshak',
+      description: 'Heavily embellished golden Zardozi poshak with matching crown (mukut) fabric. Crafted over 12 days by master artisans in Vrindavan.',
+      basePrice: 4500,
+      images: ['/images/janmashtami-poshak.png'],
+      sizes: Array.from({ length: 9 }).map((_, i) => ({ size: i, price: 4500 + i * 150 })),
+      swatches: [
+        { name: 'Royal Gold', hex: '#C9A84C' },
+        { name: 'Lotus Pink', hex: '#D4788A' },
+      ],
+      collectionId: { title: 'Janmashtami Grand Edition', slug: 'janmashtami-grand-edition' },
+    },
+  };
 
-  // Selector states
+  const initialProd = mockCatalog[params.slug] || mockCatalog['lotus-shringaar-poshak'];
+  const [product, setProduct] = useState<Product | null>(initialProd);
   const [selectedSize, setSelectedSize] = useState<number>(0);
-  const [selectedSwatch, setSelectedSwatch] = useState<Swatch | null>(null);
+  const [selectedSwatch, setSelectedSwatch] = useState<Swatch>(initialProd.swatches[0]);
   const [isBundleChecked, setIsBundleChecked] = useState(false);
+  const [loading, setLoading] = useState(false);
   
   // UI states
   const [addState, setAddState] = useState<'default' | 'adding' | 'added'>('default');
@@ -61,76 +110,7 @@ export default function ProductDetailPage({ params }: { params: { slug: string }
           setSelectedSwatch(data.swatches[0]);
         }
       } catch (err) {
-        // Fallback mockup matching our database seeds
-        const mockProducts: Record<string, Product> = {
-          'lotus-shringaar-poshak': {
-            _id: 'prod_1',
-            name: 'Lotus Shringaar Poshak',
-            slug: 'lotus-shringaar-poshak',
-            description: 'Handcrafted in Vrindavan with delicate lotus embroidery and fine golden borders. Woven with love on pure organic silk.',
-            basePrice: 1200,
-            images: ['https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=600&auto=format&fit=crop'],
-            sizes: Array.from({ length: 9 }).map((_, i) => ({ size: i, price: 1200 + i * 150 })),
-            swatches: [
-              { name: 'Vrindavan Green', hex: '#3B6B3B' },
-              { name: 'Lotus Pink', hex: '#D4788A' },
-              { name: 'Royal Gold', hex: '#C9A84C' },
-              { name: 'Peacock Blue', hex: '#1B5E6E' },
-            ],
-            collectionId: { title: 'Summer Silk Collection', slug: 'summer-silk' },
-          },
-          'morpankh-velvet-poshak': {
-            _id: 'prod_2',
-            name: 'Morpankh Velvet Poshak',
-            slug: 'morpankh-velvet-poshak',
-            description: 'Deep royal blue velvet poshak with detailed hand-embroidered peacock feathers. Ideal for cold seasons and grand afternoon darshans.',
-            basePrice: 2800,
-            images: ['https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?q=80&w=600&auto=format&fit=crop'],
-            sizes: Array.from({ length: 9 }).map((_, i) => ({ size: i, price: 2800 + i * 150 })),
-            swatches: [
-              { name: 'Peacock Blue', hex: '#1B5E6E' },
-              { name: 'Royal Gold', hex: '#C9A84C' },
-              { name: 'Temple Bronze', hex: '#8B6914' },
-            ],
-            collectionId: { title: 'Rajbhog Royal Collection', slug: 'rajbhog-royal' },
-          },
-          'swarna-janmashtami-poshak': {
-            _id: 'prod_3',
-            name: 'Swarna Janmashtami Poshak',
-            slug: 'swarna-janmashtami-poshak',
-            description: 'Heavily embellished golden Zardozi poshak with matching crown (mukut) fabric. Crafted over 12 days by master artisans in Vrindavan.',
-            basePrice: 4500,
-            images: ['https://images.unsplash.com/photo-1561336313-0bd5e0b27ec8?q=80&w=600&auto=format&fit=crop'],
-            sizes: Array.from({ length: 9 }).map((_, i) => ({ size: i, price: 4500 + i * 150 })),
-            swatches: [
-              { name: 'Royal Gold', hex: '#C9A84C' },
-              { name: 'Lotus Pink', hex: '#D4788A' },
-            ],
-            collectionId: { title: 'Janmashtami Grand Edition', slug: 'janmashtami-grand-edition' },
-          },
-          'nidhra-silk-night-dress': {
-            _id: 'prod_4',
-            name: 'Nidhra Silk Night Dress',
-            slug: 'nidhra-silk-night-dress',
-            description: 'Ultra-soft ivory silk night poshak with minimal floral embroidery. Light, non-restrictive design ensures peaceful rest for Laddu Gopal.',
-            basePrice: 950,
-            images: ['https://images.unsplash.com/photo-1508615070457-7baeba4003ab?q=80&w=600&auto=format&fit=crop'],
-            sizes: Array.from({ length: 9 }).map((_, i) => ({ size: i, price: 950 + i * 150 })),
-            swatches: [
-              { name: 'Ivory White', hex: '#FAF6EF' },
-              { name: 'Lotus Pink', hex: '#D4788A' },
-            ],
-            collectionId: { title: 'Shayan Veshbhusha', slug: 'shayan-veshbhusha' },
-          },
-        };
-
-        const fallbackProd = mockProducts[params.slug] || mockProducts['lotus-shringaar-poshak'];
-        setProduct(fallbackProd);
-        if (fallbackProd.swatches.length > 0) {
-          setSelectedSwatch(fallbackProd.swatches[0]);
-        }
-      } finally {
-        setLoading(false);
+        // Keeps initialProd seamlessly on API network error
       }
     };
 
@@ -186,7 +166,7 @@ export default function ProductDetailPage({ params }: { params: { slug: string }
         size: selectedSize,
         swatchHex: selectedSwatch.hex,
         swatchName: selectedSwatch.name,
-        image: 'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?q=80&w=600&auto=format&fit=crop',
+        image: '/images/janmashtami-poshak.png',
       });
     }
 
@@ -224,7 +204,7 @@ export default function ProductDetailPage({ params }: { params: { slug: string }
           <div className="grid grid-cols-3 gap-2">
             {product.images.map((img, idx) => (
               <div key={idx} className="aspect-square bg-deep-charcoal border border-royal-gold/10 overflow-hidden relative rounded-sm">
-                <img src={img} alt="" className="w-full h-full object-cover opacity-70 hover:opacity-100 transition-opacity" />
+                <Image src={img} alt="" fill sizes="(min-width: 1024px) 16vw, 33vw" className="object-cover opacity-70 transition-opacity hover:opacity-100" />
               </div>
             ))}
           </div>
@@ -234,7 +214,7 @@ export default function ProductDetailPage({ params }: { params: { slug: string }
         <div className="space-y-8 lg:pl-6">
           <div className="space-y-2">
             <h1 className="font-display text-3xl md:text-4xl text-ivory font-light tracking-wide">{product.name}</h1>
-            <p className="font-utility text-xl text-royal-gold">₹{totalPrice}</p>
+            <p className="font-utility text-xl text-royal-gold">INR {totalPrice}</p>
           </div>
 
           <div className="h-[1px] bg-royal-gold/15" />
@@ -306,11 +286,11 @@ export default function ProductDetailPage({ params }: { params: { slug: string }
               <label htmlFor="bundleCheck" className="cursor-pointer space-y-0.5">
                 <span className="block font-display text-sm text-ivory">Complete the Seva Bundle</span>
                 <span className="block font-body text-[11px] text-warm-beige/60">
-                  Add matching crown (Mukut) + micro jewelry set (+ ₹600)
+                  Add matching crown (Mukut) + micro jewelry set (+ INR 600)
                 </span>
               </label>
             </div>
-            <span className="font-utility text-xs text-royal-gold">+ ₹600</span>
+            <span className="font-utility text-xs text-royal-gold">+ INR 600</span>
           </div>
 
           {/* Add to Cart button */}
@@ -321,7 +301,7 @@ export default function ProductDetailPage({ params }: { params: { slug: string }
           >
             {addState === 'default' && 'Add to Altar (Cart)'}
             {addState === 'adding' && 'Preparing Offerings...'}
-            {addState === 'added' && 'Added ✓'}
+            {addState === 'added' && 'Added Done'}
           </button>
         </div>
       </div>
@@ -412,3 +392,5 @@ export default function ProductDetailPage({ params }: { params: { slug: string }
     </div>
   );
 }
+
+

@@ -90,8 +90,8 @@ export const DeityScene = () => {
       let targetLookAtY = 1.0;
 
       // Color/Lights parameters
-      let ambientColor = new THREE.Color('#1A1610');
-      let spotColor = new THREE.Color('#FDFAF4');
+      const ambientColor = new THREE.Color('#1A1610');
+      const spotColor = new THREE.Color('#FDFAF4');
       let spotIntensity = 12.0;
 
       if (scrollProgress < 0.2) {
@@ -135,13 +135,11 @@ export const DeityScene = () => {
           spotIntensity = 6.0;
         } else if (progress >= 0.25 && progress < 0.5) {
           // Shringar: Golden sunrise (4500K)
-          const p = (progress - 0.25) / 0.25;
           ambientColor.set('#8B6914');
           spotColor.set('#C9A84C');
           spotIntensity = 12.0;
         } else if (progress >= 0.5 && progress < 0.75) {
           // Rajbhog: Warm afternoon (5500K bright)
-          const p = (progress - 0.5) / 0.25;
           ambientColor.set('#FAF6EF').multiplyScalar(0.2);
           spotColor.set('#FDFAF4');
           spotIntensity = 16.0;
@@ -182,8 +180,6 @@ export const DeityScene = () => {
         position={[5, 10, 5]}
         intensity={0.8}
         color="#F2EAD3"
-        castShadow
-        shadow-mapSize={[1024, 1024]}
       />
       <spotLight
         ref={mainSpotLightRef}
@@ -344,8 +340,6 @@ export const DeityScene = () => {
           color="#E27D22"
           intensity={1.5}
           distance={3}
-          castShadow
-          shadow-bias={-0.002}
         />
       </group>
 
@@ -366,8 +360,6 @@ export const DeityScene = () => {
           color="#E27D22"
           intensity={1.5}
           distance={3}
-          castShadow
-          shadow-bias={-0.002}
         />
       </group>
     </group>

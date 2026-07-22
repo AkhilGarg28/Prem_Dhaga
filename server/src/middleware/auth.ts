@@ -6,7 +6,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'prem_dhaga_dev_secret_key_108';
 export interface AuthenticatedRequest extends Request {
   user?: {
     id: string;
-    role: 'admin' | 'manager' | 'customer';
+    role: string;
     email: string;
   };
 }

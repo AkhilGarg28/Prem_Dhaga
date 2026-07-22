@@ -1,64 +1,79 @@
-import React from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { Icons } from '@/components/Icons';
+
+const principles = [
+  ['The artisans', 'Families of handworkers shape each poshak through cutting, embroidery, jewellery pairing and final finishing.'],
+  ['The fabrics', 'Silks, brocades and velvets are selected for scale, drape and the way they receive temple light.'],
+  ['The devotion', 'Every stitch is treated as an offering, not an inventory unit. The pace is deliberate.'],
+];
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-temple-black pt-28 pb-20 px-6 md:px-16 flex flex-col justify-start">
-      <div className="max-w-3xl mx-auto w-full space-y-12">
-        {/* Header */}
-        <div className="text-center space-y-3">
-          <span className="font-utility text-xs text-royal-gold tracking-widest uppercase">The Artisan Heritage</span>
-          <h1 className="font-display text-4xl md:text-5xl text-ivory">Our Devotional Journey</h1>
-          <p className="font-body text-xs md:text-sm text-warm-beige/70 max-w-xl mx-auto leading-relaxed">
-            Discover the legacy of Prem Dhaga: bridging centuries-old Vrindavan handloom traditions with premium luxury design.
+    <div className="min-h-screen bg-temple-black text-ivory">
+      <section className="relative flex min-h-[76svh] items-end overflow-hidden px-5 pb-20 pt-36 sm:px-10 lg:px-16">
+        <Image src="/images/prem-dhaga-hero.png" alt="Prem Dhaga Vrindavan darshan" fill priority sizes="100vw" className="absolute inset-0 object-cover object-[64%_center] opacity-50" />
+        <div className="absolute inset-0 hero-veil" />
+        <div className="absolute inset-0 temple-grain opacity-30" />
+        <div className="relative mx-auto w-full max-w-[1450px]">
+          <p className="eyebrow">Our house</p>
+          <h1 className="mt-6 max-w-5xl font-display text-6xl font-light leading-[0.88] tracking-normal sm:text-8xl lg:text-[8.4rem]">
+            Every thread is woven with love.
+          </h1>
+          <p className="mt-8 max-w-xl font-body text-sm leading-7 text-cream/68">
+            Prem Dhaga bridges Vrindavan handcraft, devotional intimacy and a luxury standard of detail for Laddu Gopal seva.
           </p>
         </div>
+      </section>
 
-        {/* Narrative Section 1 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-deep-charcoal border border-royal-gold/10 p-6 md:p-8 rounded-sm">
-          <div className="space-y-4">
-            <h2 className="font-display text-2xl text-royal-gold">The Loom of Vrindavan</h2>
-            <p className="font-body text-xs md:text-sm text-warm-beige/80 leading-relaxed">
-              Prem Dhaga was born out of a desire to honour the humble artisans of Vrindavan. For generations, these families have spent their lives weaving, embroidering, and sewing poshaks for local mandirs.
-            </p>
-            <p className="font-body text-xs md:text-sm text-warm-beige/80 leading-relaxed">
-              Every dress we produce starts on wood handlooms, utilizing organic silk threads and authentic metal lace borders. Each piece is treated as a sacred prayer.
-            </p>
+      <section className="bg-[#eee5d6] px-5 py-24 text-deep-charcoal sm:px-10 lg:px-16 lg:py-36">
+        <div className="mx-auto grid max-w-[1450px] gap-14 lg:grid-cols-[0.85fr_1.15fr] lg:gap-24">
+          <div>
+            <p className="eyebrow !text-temple-bronze">Brand philosophy</p>
+            <h2 className="mt-6 font-display text-5xl font-light leading-none sm:text-7xl lg:text-[6.6rem]">
+              Not fashion.
+              <span className="block italic text-temple-bronze">Seva.</span>
+            </h2>
           </div>
-          <div className="w-full aspect-[4/3] bg-temple-black overflow-hidden relative border border-royal-gold/15">
-            <img
-              src="https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?q=80&w=600&auto=format&fit=crop"
-              alt="Artisan loom work"
-              className="w-full h-full object-cover opacity-75"
-            />
+          <div className="grid gap-8 border-t border-deep-charcoal/12 pt-8 md:grid-cols-3">
+            {principles.map(([title, text]) => (
+              <article key={title} className="space-y-5">
+                <span className="block h-px w-14 bg-temple-bronze/55" />
+                <h3 className="font-display text-3xl text-deep-charcoal">{title}</h3>
+                <p className="font-body text-sm leading-7 text-deep-charcoal/62">{text}</p>
+              </article>
+            ))}
           </div>
         </div>
+      </section>
 
-        {/* Narrative Section 2 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center bg-deep-charcoal border border-royal-gold/10 p-6 md:p-8 rounded-sm md:flex-row-reverse">
-          <div className="w-full aspect-[4/3] bg-temple-black overflow-hidden relative border border-royal-gold/15 md:order-last">
-            <img
-              src="https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=600&auto=format&fit=crop"
-              alt="Golden threads"
-              className="w-full h-full object-cover opacity-75"
-            />
+      <section className="px-5 py-24 sm:px-10 lg:px-16 lg:py-36">
+        <div className="mx-auto grid max-w-[1450px] items-center gap-14 lg:grid-cols-2 lg:gap-24">
+          <div className="atelier-window relative aspect-[4/5] overflow-hidden">
+            <Image src="/images/janmashtami-poshak.png" alt="Ceremonial Prem Dhaga poshak" fill sizes="(min-width: 1024px) 50vw, 100vw" className="object-cover" />
           </div>
-          <div className="space-y-4">
-            <h2 className="font-display text-2xl text-royal-gold">“Threads Woven with Devotion.”</h2>
-            <p className="font-body text-xs md:text-sm text-warm-beige/80 leading-relaxed">
-              We believe shopping for your deity is an extension of Bhakti (devotion). Therefore, we maintain a peaceful, meditative work environment. No rushed production lines. Weavers work at their own pace, accompanied by devotional chants and prayers.
-            </p>
-            <p className="font-body text-xs md:text-sm text-warm-beige/80 leading-relaxed">
-              When you dress your deity in Prem Dhaga, you are not just offering a dress—you are bringing home the pure prayers of Vrindavan's master craftsmen.
-            </p>
+          <div>
+            <p className="eyebrow">The mission</p>
+            <h2 className="mt-6 font-display text-5xl font-light leading-none sm:text-7xl">Bring Vrindavan home with grace.</h2>
+            <div className="mt-8 space-y-5 font-body text-sm leading-7 text-cream/64">
+              <p>
+                We design for families who want their daily seva to feel peaceful, beautiful and deeply personal. The work must be refined enough for a festival altar and gentle enough for everyday devotion.
+              </p>
+              <p>
+                When a Prem Dhaga piece leaves the atelier, it is folded, checked, paired and packed as something meant for worship.
+              </p>
+            </div>
+            <Link href="/collections" className="particle-button luxury-button mt-10 inline-flex">Explore collections</Link>
           </div>
         </div>
+      </section>
 
-        {/* Closing banner */}
-        <div className="text-center space-y-4 py-8 border-t border-royal-gold/15">
-          <p className="font-display text-2xl text-ivory">Experience the Offering</p>
-          <p className="font-hindi text-sm italic text-royal-gold">“सेवा केवल वस्त्र नहीं, प्रेम का अर्पण है।”</p>
-        </div>
-      </div>
+      <section className="border-t border-royal-gold/12 px-5 py-20 text-center sm:px-10 lg:px-16">
+        <Icons.PeacockFeather className="mx-auto text-royal-gold" size={38} />
+        <p className="mx-auto mt-7 max-w-2xl font-display text-3xl font-light italic leading-10 text-cream/78">
+          Seva is not only a garment. It is an offering of love.
+        </p>
+      </section>
     </div>
   );
 }

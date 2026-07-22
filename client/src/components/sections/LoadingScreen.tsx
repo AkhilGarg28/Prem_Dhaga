@@ -1,149 +1,108 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useScene } from '../../store/useScene';
-import { useAudio } from '../../store/useAudio';
-import { Icons } from '../Icons';
 
-export const LoadingScreen = () => {
-  const { isLoading, setIsLoading, skipIntro, setSkipIntro } = useScene();
-  const { initAudio } = useAudio();
-  const [progress, setProgress] = useState(0);
-  const [doorsOpen, setDoorsOpen] = useState(false);
+export default function LoadingScreen() {
+  const { isLoading, setIsLoading } = useScene();
+  const [ready, setReady] = useState(false);
+  const [opening, setOpening] = useState(false);
 
   useEffect(() => {
-    if (skipIntro) {
-      setProgress(100);
-      setDoorsOpen(true);
-      const timer = setTimeout(() => {
-        setIsLoading(false);
-      }, 800); // Wait for door opening animation
-      return () => clearTimeout(timer);
+    if (window.sessionStorage.getItem('prem-dhaga-intro-seen') === 'true') {
+      setIsLoading(false);
+      return;
     }
 
-    // Simulate loading count
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setDoorsOpen(true);
-          // Wait for door swing animation to finish before removing loading screen
-          setTimeout(() => {
-            setIsLoading(false);
-          }, 1200);
-          return 100;
-        }
-        const step = Math.floor(Math.random() * 8) + 4;
-        return Math.min(100, prev + step);
-      });
-    }, 120);
+    const readyTimer = window.setTimeout(() => setReady(true), 250);
+    const openTimer = window.setTimeout(() => {
+      setOpening(true);
+      window.sessionStorage.setItem('prem-dhaga-intro-seen', 'true');
+      window.setTimeout(() => setIsLoading(false), 520);
+    }, 850);
 
-    return () => clearInterval(interval);
-  }, [skipIntro, setIsLoading]);
+    return () => {
+      window.clearTimeout(readyTimer);
+      window.clearTimeout(openTimer);
+    };
+  }, [setIsLoading]);
 
-  const handleSkip = () => {
-    initAudio(); // Trigger audio activation
-    setSkipIntro(true);
+  const enter = () => {
+    if (opening) return;
+    setOpening(true);
+    window.sessionStorage.setItem('prem-dhaga-intro-seen', 'true');
+    window.setTimeout(() => setIsLoading(false), 520);
   };
 
-  if (!isLoading && doorsOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden flex select-none">
-      {/* LEFT TEMPLE DOOR */}
-      <div
-        className={`absolute left-0 top-0 bottom-0 w-1/2 bg-[#1C140E] border-r border-[#8B6914]/25 flex flex-col items-end justify-center transition-transform duration-[1200ms] ease-in-out ${
-          doorsOpen ? '-translate-x-full' : 'translate-x-0'
-        }`}
-        style={{
-          backgroundImage:
-            'radial-gradient(circle at 100% 50%, rgba(201, 168, 76, 0.05) 0%, transparent 70%)',
-        }}
-      >
-        {/* Left half ornament */}
-        <div className="mr-8 border-y-2 border-r-2 border-royal-gold/20 w-16 h-32 rounded-r-full flex items-center justify-end pr-2 pointer-events-none">
-          <div className="w-4 h-12 bg-royal-gold/30 rounded-r-full" />
-        </div>
-      </div>
+    <AnimatePresence>
+      {isLoading && (
+        <motion.div
+          className="fixed inset-0 z-[100] overflow-hidden bg-[#080705]"
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          aria-label="Prem Dhaga entrance"
+        >
+          <div className="absolute inset-0 temple-grain opacity-30" />
+          <div className="absolute left-1/2 top-0 h-full w-px bg-royal-gold/15" />
 
-      {/* RIGHT TEMPLE DOOR */}
-      <div
-        className={`absolute right-0 top-0 bottom-0 w-1/2 bg-[#1C140E] border-l border-[#8B6914]/25 flex flex-col items-start justify-center transition-transform duration-[1200ms] ease-in-out ${
-          doorsOpen ? 'translate-x-full' : 'translate-x-0'
-        }`}
-        style={{
-          backgroundImage:
-            'radial-gradient(circle at 0% 50%, rgba(201, 168, 76, 0.05) 0%, transparent 70%)',
-        }}
-      >
-        {/* Right half ornament */}
-        <div className="ml-8 border-y-2 border-l-2 border-royal-gold/20 w-16 h-32 rounded-l-full flex items-center justify-start pl-2 pointer-events-none">
-          <div className="w-4 h-12 bg-royal-gold/30 rounded-l-full" />
-        </div>
-      </div>
-
-      {/* CENTER LOADING OVERLAY */}
-      <div
-        className={`absolute inset-0 flex flex-col items-center justify-center z-10 transition-opacity duration-500 ${
-          doorsOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'
-        }`}
-      >
-        {/* Animated Drawing SVG Logo */}
-        <div className="relative mb-6 flex flex-col items-center">
-          <div className="w-20 h-20 text-royal-gold relative">
-            <svg
-              className="w-full h-full stroke-royal-gold stroke-[1.5] fill-none animate-[dash_3s_ease-in-out_infinite]"
-              viewBox="0 0 64 64"
-              strokeDasharray="300"
-              strokeDashoffset="300"
-              style={{
-                animation: 'drawLogo 3s ease-in-out forwards',
-              }}
-            >
-              {/* Custom SVG logo path representing standard peacock feather outline */}
-              <path d="M32 58C32 58 32 30 32 6 C20 18 16 30 32 44C48 30 44 18 32 6 Z" />
-              <path d="M32 14C26 20 24 26 32 34C40 26 38 20 32 14 Z" />
-            </svg>
-            <style jsx global>{`
-              @keyframes drawLogo {
-                to {
-                  stroke-dashoffset: 0;
-                }
-              }
-            `}</style>
-          </div>
-          <span className="font-display text-2xl tracking-[0.2em] text-ivory mt-4">
-            PREM DHAGA
-          </span>
-          <span className="font-utility text-[9px] tracking-[0.3em] text-royal-gold uppercase mt-2">
-            Devotional Atelier
-          </span>
-        </div>
-
-        {/* Loading Progress Bar */}
-        <div className="w-64 h-[1px] bg-royal-gold/15 relative overflow-hidden mb-3">
-          <div
-            className="h-full bg-royal-gold transition-all duration-300 ease-out"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-
-        {/* Counter */}
-        <div className="font-display italic text-base text-warm-beige/80">
-          {progress}%
-        </div>
-
-        {/* Skip Button */}
-        {progress > 15 && (
-          <button
-            onClick={handleSkip}
-            className="mt-12 font-utility text-[10px] tracking-[0.25em] text-warm-beige hover:text-royal-gold border border-royal-gold/25 hover:border-royal-gold px-6 py-2 transition-all duration-300 uppercase cursor-pointer"
+          <motion.div
+            className="temple-door left-0 origin-left"
+            animate={{ x: opening ? '-101%' : '0%', rotateY: opening ? -13 : 0 }}
+            transition={{ duration: 0.52, ease: [0.76, 0, 0.24, 1] }}
           >
-            Skip Intro
-          </button>
-        )}
-      </div>
-    </div>
+            <div className="door-panel door-panel-left"><span className="door-ring" /></div>
+          </motion.div>
+          <motion.div
+            className="temple-door right-0 origin-right"
+            animate={{ x: opening ? '101%' : '0%', rotateY: opening ? 13 : 0 }}
+            transition={{ duration: 0.52, ease: [0.76, 0, 0.24, 1] }}
+          >
+            <div className="door-panel door-panel-right"><span className="door-ring" /></div>
+          </motion.div>
+
+          <motion.div
+            className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center"
+            animate={{ opacity: opening ? 0 : 1, scale: opening ? 1.04 : 1 }}
+            transition={{ duration: 0.4 }}
+          >
+            <motion.svg
+              viewBox="0 0 80 104"
+              className="mb-7 h-24 w-20 text-royal-gold"
+              initial="hidden"
+              animate="visible"
+              aria-hidden="true"
+            >
+              <motion.path
+                d="M40 99C39 78 37 61 40 44M40 44C18 36 17 17 38 5C58 20 60 39 40 44ZM39 14C29 22 29 31 40 36C49 29 48 21 39 14ZM40 44C30 54 22 59 12 61M40 47C50 55 59 59 69 59"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.25"
+                strokeLinecap="round"
+                variants={{ hidden: { pathLength: 0, opacity: 0 }, visible: { pathLength: 1, opacity: 1 } }}
+                transition={{ duration: 0.85, ease: 'easeInOut' }}
+              />
+            </motion.svg>
+            <p className="font-utility text-[9px] uppercase tracking-[0.42em] text-cream/45">Vrindavan / India</p>
+            <h2 className="mt-5 font-display text-4xl font-light tracking-[0.2em] text-ivory sm:text-5xl">PREM DHAGA</h2>
+            <p className="mt-3 font-display text-lg italic text-royal-gold/80">Threads woven with devotion</p>
+
+            <motion.button
+              type="button"
+              onClick={enter}
+              disabled={!ready || opening}
+              className="intro-enter mt-14 disabled:cursor-wait disabled:opacity-35"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: ready ? 1 : 0, y: ready ? 0 : 10 }}
+              transition={{ duration: 0.35 }}
+            >
+              <span>Begin darshan</span>
+              <span className="h-px w-8 bg-current" />
+            </motion.button>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
-};
-export default LoadingScreen;
+}
