@@ -158,7 +158,7 @@ export const createProduct = async (req: Request, res: Response) => {
       isFeatured: isFeatured === 'true' || isFeatured === true,
       isTrending: isTrending === 'true' || isTrending === true,
       isBestSeller: isBestSeller === 'true' || isBestSeller === true,
-      stock: stock ? Number(stock) : 10,
+      stock: (stock !== undefined && stock !== '') ? Number(stock) : 10,
       weight: weight ? Number(weight) : 200,
       material,
       fabric,

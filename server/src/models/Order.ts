@@ -29,6 +29,17 @@ const orderSchema = new Schema(
     razorpayOrderId: { type: String },
     razorpayPaymentId: { type: String },
     razorpaySignature: { type: String },
+    couponCode: { type: String },
+    discountAmount: { type: Number, default: 0 },
+    trackingTimeline: [
+      {
+        status: { type: String },
+        title: { type: String },
+        description: { type: String },
+        location: { type: String },
+        timestamp: { type: Date, default: Date.now },
+      },
+    ],
     shippingDetails: {
       name: { type: String, required: true },
       email: { type: String, required: true },

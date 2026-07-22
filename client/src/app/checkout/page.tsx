@@ -98,12 +98,16 @@ export default function CheckoutPage() {
       };
 
       // 3. Open Razorpay Modal if loaded
-      const RazorpaySDK = (window as any).Razorpay;
-      if (RazorpaySDK) {
-        const rzp = new RazorpaySDK(options);
-        rzp.open();
-      } else {
-        console.warn('Razorpay SDK script not loaded yet. Revealing simulation backup.');
+      try {
+        const RazorpaySDK = (window as any).Razorpay;
+        if (RazorpaySDK) {
+          const rzp = new RazorpaySDK(options);
+          rzp.open();
+        } else {
+          console.warn('Razorpay SDK script not loaded yet. Revealing simulation backup.');
+        }
+      } catch (rzpErr) {
+        console.warn('Razorpay SDK failed to open. Revealing simulation backup.', rzpErr);
       }
     } catch (err) {
       console.error('Checkout error:', err);

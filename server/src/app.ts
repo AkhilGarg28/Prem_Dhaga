@@ -10,6 +10,10 @@ import productRoutes from './routes/productRoutes';
 import orderRoutes from './routes/orderRoutes';
 import customRoutes from './routes/customRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
+import cmsRoutes from './routes/cmsRoutes';
+import couponRoutes from './routes/couponRoutes';
+import reviewRoutes from './routes/reviewRoutes';
+import userRoutes from './routes/userRoutes';
 
 dotenv.config();
 
@@ -18,7 +22,15 @@ const PORT = process.env.PORT || 5000;
 
 // Middleware
 app.use(cors({
-  origin: '*', // In production, replace with specific domains (e.g. Vercel client domains)
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    // Allow localhost 3000
+    if (origin.includes('localhost:3000') || origin.includes('127.0.0.1:3000')) {
+      return callback(null, true);
+    }
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
 }));
 app.use(express.json());
@@ -35,6 +47,10 @@ app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/custom', customRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/cms', cmsRoutes);
+app.use('/api/coupons', couponRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/users', userRoutes);
 
 // Root route
 app.get('/', (req, res) => {
