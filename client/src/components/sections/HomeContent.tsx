@@ -3,8 +3,7 @@
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
 import Link from 'next/link';
-import { motion, useReducedMotion, useScroll, useTransform } from 'framer-motion';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { Icons } from '../Icons';
 import LoadingScreen from './LoadingScreen';
 import { useAudio } from '../../store/useAudio';
@@ -134,41 +133,109 @@ const testimonials = [
   { quote: 'Their team helped me choose the right size and matching mukut. The whole experience felt calm, respectful and premium.', name: 'Raghav Joshi', city: 'Ahmedabad' },
 ];
 
-const reveal = {
-  hidden: { opacity: 0, y: 34 },
-  visible: { opacity: 1, y: 0 },
+
+type HeroMediaStyle = CSSProperties & {
+  '--hero-scale': number;
+  '--hero-y': string;
 };
+
+type IdleWindow = Window & {
+  requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+  cancelIdleCallback?: (handle: number) => void;
+};
+
+const heroMediaStyle: HeroMediaStyle = {
+  '--hero-scale': 1,
+  '--hero-y': '0%',
+};
+
+const clampProgress = (value: number) => Math.min(1, Math.max(0, value));
 
 export default function HomeContent() {
   const rootRef = useRef<HTMLDivElement>(null);
-  const prefersReducedMotion = useReducedMotion();
+  const heroMediaRef = useRef<HTMLDivElement>(null);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [showCanvas, setShowCanvas] = useState(false);
-  const { scrollYProgress } = useScroll({ target: rootRef, offset: ['start start', 'end end'] });
-  const heroScale = useTransform(scrollYProgress, [0, 0.18], [1, prefersReducedMotion ? 1 : 1.08]);
-  const heroY = useTransform(scrollYProgress, [0, 0.18], ['0%', prefersReducedMotion ? '0%' : '8%']);
-  const { setScrollProgress, setActivePoshakIndex, setCurrentScene } = useScene();
-  const { updateMix } = useAudio();
-  const { addItem, setIsOpen } = useCart();
+  const setScrollProgress = useScene((state) => state.setScrollProgress);
+  const setActivePoshakIndex = useScene((state) => state.setActivePoshakIndex);
+  const setCurrentScene = useScene((state) => state.setCurrentScene);
+  const updateMix = useAudio((state) => state.updateMix);
+  const addItem = useCart((state) => state.addItem);
+  const setIsOpen = useCart((state) => state.setIsOpen);
+
+  useEffect(() => {
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const syncPreference = () => setPrefersReducedMotion(media.matches);
+
+    syncPreference();
+    media.addEventListener('change', syncPreference);
+
+    return () => media.removeEventListener('change', syncPreference);
+  }, []);
 
   useEffect(() => {
     if (prefersReducedMotion) return;
 
     const connection = (navigator as NavigatorWithConnection).connection;
     const isSlowConnection = connection?.saveData || /2g/.test(connection?.effectiveType ?? '');
-    if (isSlowConnection) return;
+    const isCompactScreen = window.matchMedia('(max-width: 767px)').matches;
+    if (isSlowConnection || isCompactScreen) return;
 
-    const timer = window.setTimeout(() => setShowCanvas(true), 650);
-    return () => window.clearTimeout(timer);
+    const idleWindow = window as IdleWindow;
+    let timeoutId = 0;
+    let idleId: number | null = null;
+    const loadCanvas = () => setShowCanvas(true);
+
+    if (idleWindow.requestIdleCallback) {
+      idleId = idleWindow.requestIdleCallback(loadCanvas, { timeout: 1800 });
+    } else {
+      timeoutId = window.setTimeout(loadCanvas, 1400);
+    }
+
+    return () => {
+      if (idleId !== null) idleWindow.cancelIdleCallback?.(idleId);
+      if (timeoutId) window.clearTimeout(timeoutId);
+    };
   }, [prefersReducedMotion]);
-useEffect(() => {
-    const unsubscribe = scrollYProgress.on('change', (progress) => {
+
+  useEffect(() => {
+    let rafId = 0;
+
+    const updateScrollState = () => {
+      rafId = 0;
+      const root = rootRef.current;
+      if (!root) return;
+
+      const rootTop = root.getBoundingClientRect().top + window.scrollY;
+      const maxScrollable = Math.max(1, root.scrollHeight - window.innerHeight);
+      const progress = clampProgress((window.scrollY - rootTop) / maxScrollable);
+      const heroProgress = clampProgress(progress / 0.18);
+
+      if (heroMediaRef.current) {
+        heroMediaRef.current.style.setProperty('--hero-scale', String(prefersReducedMotion ? 1 : 1 + heroProgress * 0.08));
+        heroMediaRef.current.style.setProperty('--hero-y', prefersReducedMotion ? '0%' : String(heroProgress * 8) + '%');
+      }
+
       setScrollProgress(progress);
       setActivePoshakIndex(Math.min(6, Math.max(0, Math.floor(progress * 7))));
       setCurrentScene(progress < 0.2 ? 1 : progress < 0.42 ? 2 : progress < 0.72 ? 3 : 4);
       updateMix(progress);
-    });
-    return unsubscribe;
-  }, [scrollYProgress, setActivePoshakIndex, setCurrentScene, setScrollProgress, updateMix]);
+    };
+
+    const requestUpdate = () => {
+      if (!rafId) rafId = window.requestAnimationFrame(updateScrollState);
+    };
+
+    requestUpdate();
+    window.addEventListener('scroll', requestUpdate, { passive: true });
+    window.addEventListener('resize', requestUpdate);
+
+    return () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
+      window.removeEventListener('scroll', requestUpdate);
+      window.removeEventListener('resize', requestUpdate);
+    };
+  }, [prefersReducedMotion, setActivePoshakIndex, setCurrentScene, setScrollProgress, updateMix]);
 
   const addOffering = (product: (typeof productRelics)[number]) => {
     addItem({
@@ -188,7 +255,7 @@ useEffect(() => {
       <LoadingScreen />
 
       <section className="hero-chapter relative min-h-[112svh] overflow-hidden" aria-labelledby="hero-title">
-        <motion.div className="absolute inset-0 z-0" style={{ scale: heroScale, y: heroY }}>
+        <div ref={heroMediaRef} className="hero-media absolute inset-0 z-0" style={heroMediaStyle}>
           <Image
             src="/images/prem-dhaga-hero.png"
             alt="Laddu Gopal seated in a dawn-lit Vrindavan temple courtyard"
@@ -197,7 +264,7 @@ useEffect(() => {
             sizes="100vw"
             className="object-cover object-[66%_center] opacity-70"
           />
-        </motion.div>
+        </div>
         {showCanvas && <MainCanvas className="z-[1] opacity-70 mix-blend-screen" />}
         <div className="absolute inset-0 z-[2] hero-veil" />
         <div className="absolute inset-0 z-[3] temple-grain pointer-events-none" />
@@ -205,11 +272,7 @@ useEffect(() => {
         <div className="absolute inset-x-0 bottom-0 z-[3] h-48 bg-gradient-to-t from-temple-black to-transparent" />
 
         <div className="relative z-10 mx-auto flex min-h-[112svh] max-w-[1600px] items-center px-5 pb-28 pt-32 sm:px-10 lg:px-16">
-          <motion.div
-            initial="hidden"
-            animate="visible"
-            transition={{ duration: 1.1, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            variants={reveal}
+          <div
             className="max-w-[850px]"
           >
             <p className="eyebrow mb-7">Prem Dhaga / Vrindavan atelier</p>
@@ -227,7 +290,7 @@ useEffect(() => {
                 <Link href="#darshan-journey" className="particle-button luxury-button-outline">Begin darshan</Link>
               </div>
             </div>
-          </motion.div>
+          </div>
 
           <div className="absolute bottom-9 left-5 z-10 flex items-center gap-4 sm:left-10 lg:left-16">
             <span className="h-px w-14 bg-royal-gold/50" />
@@ -244,7 +307,7 @@ useEffect(() => {
       <section className="relative bg-[#ece2d1] px-5 py-28 text-deep-charcoal sm:px-10 lg:px-16 lg:py-44">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-temple-bronze/30 to-transparent" />
         <div className="mx-auto grid max-w-[1450px] gap-16 lg:grid-cols-[0.66fr_1.34fr] lg:gap-24">
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.35 }} variants={reveal} transition={{ duration: 0.9 }}>
+          <div>
             <p className="eyebrow !text-temple-bronze">The philosophy</p>
             <div className="mt-10 space-y-7">
               {craftDetails.map((detail) => (
@@ -254,8 +317,8 @@ useEffect(() => {
                 </div>
               ))}
             </div>
-          </motion.div>
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.25 }} variants={reveal} transition={{ duration: 1, delay: 0.1 }}>
+          </div>
+          <div>
             <h2 className="font-display text-5xl sm:text-6xl lg:text-8xl 2xl:text-[7rem] font-light leading-[0.94] tracking-normal">
               This is not fashion.
               <span className="block italic text-temple-bronze">This is seva.</span>
@@ -268,7 +331,7 @@ useEffect(() => {
                 We keep the interface calm for the same reason we keep the stitching slow. Nothing shouts. Everything invites attention.
               </p>
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -290,12 +353,8 @@ useEffect(() => {
 
           <div className="mt-20 grid gap-4 md:grid-cols-2 xl:grid-cols-7">
             {darshanChapters.map((chapter, index) => (
-              <motion.article
+              <article
                 key={chapter.title}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ duration: 0.78, delay: index * 0.05 }}
                 className="darshan-stage group"
               >
                 <span className="font-utility text-[8px] uppercase tracking-[0.28em] text-royal-gold/70">{chapter.time}</span>
@@ -306,7 +365,7 @@ useEffect(() => {
                   <p>{chapter.light}</p>
                   <p>{chapter.fabric}</p>
                 </div>
-              </motion.article>
+              </article>
             ))}
           </div>
         </div>
@@ -326,12 +385,8 @@ useEffect(() => {
 
           <div className="grid gap-5 lg:grid-cols-12 lg:grid-rows-[310px_310px_310px]">
             {collections.map((collection, index) => (
-              <motion.article
+              <article
                 key={collection.title}
-                initial={{ opacity: 0, y: 28 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ duration: 0.85, delay: index * 0.06 }}
                 className={`collection-editorial group relative min-h-[430px] overflow-hidden lg:min-h-0 ${index === 0 ? 'lg:col-span-7 lg:row-span-2' : index === 5 ? 'lg:col-span-7' : 'lg:col-span-5'}`}
               >
                 <Link href={collection.href} prefetch={true} aria-label={`Explore ${collection.title}`} className="absolute inset-0 z-20" />
@@ -353,7 +408,7 @@ useEffect(() => {
                     <Icons.ArrowRight size={16} />
                   </span>
                 </div>
-              </motion.article>
+              </article>
             ))}
           </div>
         </div>
@@ -373,12 +428,8 @@ useEffect(() => {
 
           <div className="mt-16 grid gap-6 lg:grid-cols-3">
             {productRelics.map((product, index) => (
-              <motion.article
+              <article
                 key={product.id}
-                initial={{ opacity: 0, y: 28 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.2 }}
-                transition={{ duration: 0.85, delay: index * 0.08 }}
                 className="product-relic group"
               >
                 <Link href={product.slug} className="relative block aspect-[4/5] overflow-hidden bg-[#16110c]">
@@ -404,7 +455,7 @@ useEffect(() => {
                     <button type="button" onClick={() => addOffering(product)} aria-label={`Add ${product.name} to cart`} className="icon-action"><Icons.Cart size={16} /></button>
                   </div>
                 </div>
-              </motion.article>
+              </article>
             ))}
           </div>
         </div>
@@ -413,10 +464,10 @@ useEffect(() => {
       <section className="relative overflow-hidden bg-[#120f0b] px-5 py-28 sm:px-10 lg:px-16 lg:py-40">
         <div className="absolute inset-0 temple-grain opacity-20" />
         <div className="relative mx-auto grid max-w-[1450px] items-center gap-16 lg:grid-cols-[0.95fr_1.05fr] lg:gap-24">
-          <motion.div initial={{ opacity: 0, scale: 0.97 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, amount: 0.2 }} transition={{ duration: 1 }} className="atelier-window relative aspect-[4/5] overflow-hidden">
+          <div className="atelier-window relative aspect-[4/5] overflow-hidden">
             <Image src="/images/shayan-poshak.png" alt="Handcrafted silk poshak displayed with temple styling" fill sizes="(min-width: 1024px) 46vw, 100vw" className="object-cover" />
-          </motion.div>
-          <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, amount: 0.3 }} variants={reveal} transition={{ duration: 0.9 }}>
+          </div>
+          <div>
             <p className="eyebrow">The atelier</p>
             <h2 className="mt-6 font-display text-5xl sm:text-7xl lg:text-[6.4rem] 2xl:text-[6.8rem] font-light leading-[0.92] tracking-normal">
               Woven in quiet.
@@ -437,7 +488,7 @@ useEffect(() => {
                 </div>
               ))}
             </div>
-          </motion.div>
+          </div>
         </div>
       </section>
 
@@ -454,12 +505,8 @@ useEffect(() => {
           </div>
           <div className="customer-gallery">
             {galleryStories.map((story, index) => (
-              <motion.article
+              <article
                 key={`${story.title}-${story.place}`}
-                initial={{ opacity: 0, y: 26 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.15 }}
-                transition={{ duration: 0.75, delay: index * 0.05 }}
                 className="gallery-polaroid group"
               >
                 <div className="relative aspect-[4/5] overflow-hidden bg-deep-charcoal">
@@ -469,7 +516,7 @@ useEffect(() => {
                   <h3 className="font-display text-2xl text-deep-charcoal">{story.title}</h3>
                   <p className="mt-1 font-utility text-[8px] uppercase tracking-[0.22em] text-temple-bronze/76">{story.place}</p>
                 </div>
-              </motion.article>
+              </article>
             ))}
           </div>
         </div>
@@ -481,12 +528,8 @@ useEffect(() => {
           <h2 className="mt-5 font-display text-5xl sm:text-7xl lg:text-[6.4rem] 2xl:text-[6.8rem] font-light leading-none tracking-normal">Handwritten blessings.</h2>
           <div className="mt-16 grid gap-6 md:grid-cols-3">
             {testimonials.map((testimonial, index) => (
-              <motion.figure
+              <figure
                 key={testimonial.name}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, amount: 0.25 }}
-                transition={{ duration: 0.75, delay: index * 0.08 }}
                 className="parchment-card p-7 text-left"
               >
                 <div className="mb-8 flex items-center justify-between">
@@ -497,7 +540,7 @@ useEffect(() => {
                 <figcaption className="mt-8 border-t border-temple-bronze/15 pt-4 font-utility text-[9px] uppercase tracking-[0.2em] text-temple-bronze/80">
                   {testimonial.name} / {testimonial.city}
                 </figcaption>
-              </motion.figure>
+              </figure>
             ))}
           </div>
         </div>

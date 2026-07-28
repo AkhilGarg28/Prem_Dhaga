@@ -435,9 +435,52 @@ input:focus-visible {
   font-size: 9px;
   letter-spacing: .3em;
   text-transform: uppercase;
-  transition: background .5s, color .5s, border-color .5s;
+  transition: background .5s, color .5s, border-color .5s, opacity .35s, transform .35s;
 }
 .intro-enter:hover { border-color: var(--royal-gold); background: var(--royal-gold); color: var(--temple-black); }
+.loading-screen {
+  transition: opacity .32s ease;
+}
+.loading-screen .temple-door {
+  transition: transform .42s cubic-bezier(.76, 0, .24, 1);
+  transform-style: preserve-3d;
+}
+.loading-screen.is-opening {
+  opacity: 0;
+  pointer-events: none;
+}
+.loading-screen.is-opening .temple-door-left {
+  transform: translateX(-101%) rotateY(-13deg);
+}
+.loading-screen.is-opening .temple-door-right {
+  transform: translateX(101%) rotateY(13deg);
+}
+.intro-content {
+  transition: opacity .3s ease, transform .36s cubic-bezier(.16, 1, .3, 1);
+}
+.loading-screen.is-opening .intro-content {
+  opacity: 0;
+  transform: scale(1.04);
+}
+.intro-mark path {
+  animation: intro-draw .62s ease-in-out both;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.intro-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.intro-enter.is-ready {
+  opacity: 1;
+  transform: translateY(0);
+}
+@keyframes intro-draw {
+  to {
+    opacity: 1;
+    stroke-dashoffset: 0;
+  }
+}
 
 @media (max-width: 767px) {
   .hero-veil {
@@ -672,4 +715,10 @@ input:focus-visible {
 }
 .collection-cinema:hover::after {
   border-color: rgba(196, 161, 90, .28);
+}
+
+.hero-media {
+  transform: translate3d(0, var(--hero-y, 0%), 0) scale(var(--hero-scale, 1));
+  transform-origin: center;
+  will-change: transform;
 }

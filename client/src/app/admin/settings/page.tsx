@@ -80,6 +80,40 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
+          {/* Section 3: Shiprocket Logistics Integration */}
+          <div className="bg-[#12141D] p-5 rounded-xl border border-slate-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xs uppercase text-amber-400 font-semibold">3. Shiprocket Logistics Integration</h2>
+              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono">
+                ✓ Connected & Active
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-[10px] text-slate-400 uppercase mb-1">API User Email</label>
+                <input
+                  type="text"
+                  disabled
+                  value="photosakhil18@gmail.com"
+                  className="w-full px-3 py-2 bg-slate-950/60 border border-slate-800 rounded-lg text-emerald-400 cursor-not-allowed font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-slate-400 uppercase mb-1">API Authentication</label>
+                <input
+                  type="password"
+                  disabled
+                  value="••••••••••••••••••••••••"
+                  className="w-full px-3 py-2 bg-slate-950/60 border border-slate-800 rounded-lg text-slate-400 cursor-not-allowed font-mono"
+                />
+              </div>
+            </div>
+            <p className="text-[11px] text-slate-400">
+              Orders placed on Prem Dhaga automatically sync to Shiprocket for dispatching with Delhivery, BlueDart, Xpressbees & DTDC.
+            </p>
+          </div>
+
           {/* Section 3: Security & 2FA */}
           <div className="bg-[#12141D] p-5 rounded-xl border border-slate-800 space-y-4">
             <h2 className="text-xs uppercase text-amber-400 font-semibold">3. Admin Security & Hardening</h2>

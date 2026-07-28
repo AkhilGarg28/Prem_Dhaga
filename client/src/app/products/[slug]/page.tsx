@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCart } from '@/store/useCart';
+import { useAuth } from '@/store/useAuth';
 import { Icons } from '@/components/Icons';
 import dynamic from 'next/dynamic';
 
@@ -84,6 +85,21 @@ export default function ProductDetailPage({ params }: { params: { slug: string }
       ],
       collectionId: { title: 'Janmashtami Grand Edition', slug: 'janmashtami-grand-edition' },
     },
+    'nidhra-silk-night-dress': {
+      _id: 'prod_4',
+      name: 'Nidhra Shayan Silk',
+      slug: 'nidhra-silk-night-dress',
+      description: 'A feather-soft night seva set with quiet floral details. Woven from pure moon-ivory silk with delicate thread borders, designed for the final shayan darshan of the day.',
+      basePrice: 1850,
+      images: ['/images/shayan-poshak.png'],
+      sizes: Array.from({ length: 9 }).map((_, i) => ({ size: i, price: 1850 + i * 150 })),
+      swatches: [
+        { name: 'Moon Ivory', hex: '#f6f0e4' },
+        { name: 'Lotus Pink', hex: '#D4788A' },
+        { name: 'Vrindavan Green', hex: '#3B6B3B' },
+      ],
+      collectionId: { title: 'Shayan Veshbhusha', slug: 'shayan-veshbhusha' },
+    },
   };
 
   const initialProd = mockCatalog[params.slug] || mockCatalog['lotus-shringaar-poshak'];
@@ -96,6 +112,15 @@ export default function ProductDetailPage({ params }: { params: { slug: string }
   // UI states
   const [addState, setAddState] = useState<'default' | 'adding' | 'added'>('default');
   const [isSizeModalOpen, setIsSizeModalOpen] = useState(false);
+
+  // Reviews and Customer login States
+  const { isLoggedIn, user, token } = useAuth();
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [submitError, setSubmitError] = useState('');
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -116,6 +141,63 @@ export default function ProductDetailPage({ params }: { params: { slug: string }
 
     fetchProduct();
   }, [params.slug]);
+
+  const fetchReviews = async () => {
+    if (!product?._id) return;
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const res = await fetch(`${apiUrl}/reviews/product/${product._id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setReviews(data);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch reviews', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchReviews();
+  }, [product?._id]);
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!product?._id) return;
+    setSubmittingReview(true);
+    setSubmitError('');
+    setSubmitSuccess(false);
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      const res = await fetch(`${apiUrl}/reviews`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          productId: product._id,
+          name: user?.name || 'Devoted Customer',
+          rating: Number(reviewRating),
+          comment: reviewComment,
+        })
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setSubmitError(data.error || 'Failed to submit review.');
+      } else {
+        setSubmitSuccess(true);
+        setReviewComment('');
+        setReviewRating(5);
+        fetchReviews(); // Reload dynamic reviews list!
+      }
+    } catch (err) {
+      setSubmitError('Error submitting review.');
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -354,39 +436,106 @@ export default function ProductDetailPage({ params }: { params: { slug: string }
           <h2 className="font-display text-3xl text-ivory mt-2">Handwritten Blessings</h2>
         </div>
 
+        {/* Dynamic Reviews List */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          {/* Review 1 */}
-          <div className="parchment-card p-8 min-h-[160px] flex flex-col justify-between relative overflow-hidden">
-            {/* Golden Wax Seal */}
-            <div className="absolute top-6 right-6 w-8 h-8 rounded-full bg-gradient-to-r from-brass to-royal-gold shadow-md flex items-center justify-center text-[10px] text-temple-black font-utility font-bold border border-[#8B6914]/20 select-none">
-              PD
-            </div>
-            
-            <p className="font-serif-head text-sm italic text-deep-charcoal/90 leading-relaxed pr-8">
-              "The fabric of the Lotus Shringaar Poshak is so soft. You can truly feel that the weavers crafted this with pure devotion in their hearts. Fits my size 2 Ladoo Gopal perfectly."
+          {reviews.length > 0 ? (
+            reviews.map((rev) => (
+              <div key={rev._id} className="parchment-card p-8 min-h-[160px] flex flex-col justify-between relative overflow-hidden">
+                <div className="absolute top-6 right-6 w-8 h-8 rounded-full bg-gradient-to-r from-brass to-royal-gold shadow-md flex items-center justify-center text-[10px] text-temple-black font-utility font-bold border border-[#8B6914]/20 select-none">
+                  ★ {rev.rating}
+                </div>
+                <p className="font-serif-head text-sm italic text-deep-charcoal/90 leading-relaxed pr-8">
+                  "{rev.comment}"
+                </p>
+                <div className="mt-6 flex justify-between items-center text-[11px] font-utility tracking-wider text-temple-bronze border-t border-[#8B6914]/15 pt-4">
+                  <span>{rev.name}</span>
+                  <span>{new Date(rev.createdAt).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</span>
+                </div>
+              </div>
+            ))
+          ) : (
+            <>
+              {/* Review 1 */}
+              <div className="parchment-card p-8 min-h-[160px] flex flex-col justify-between relative overflow-hidden">
+                <div className="absolute top-6 right-6 w-8 h-8 rounded-full bg-gradient-to-r from-brass to-royal-gold shadow-md flex items-center justify-center text-[10px] text-temple-black font-utility font-bold border border-[#8B6914]/20 select-none">
+                  PD
+                </div>
+                <p className="font-serif-head text-sm italic text-deep-charcoal/90 leading-relaxed pr-8">
+                  "The fabric of the Lotus Shringaar Poshak is so soft. You can truly feel that the weavers crafted this with pure devotion in their hearts. Fits my size 2 Ladoo Gopal perfectly."
+                </p>
+                <div className="mt-6 flex justify-between items-center text-[11px] font-utility tracking-wider text-temple-bronze border-t border-[#8B6914]/15 pt-4">
+                  <span>Srimati Radharani Dasi, Vrindavan</span>
+                  <span>June 2026</span>
+                </div>
+              </div>
+
+              {/* Review 2 */}
+              <div className="parchment-card p-8 min-h-[160px] flex flex-col justify-between relative overflow-hidden">
+                <div className="absolute top-6 right-6 w-8 h-8 rounded-full bg-gradient-to-r from-brass to-royal-gold shadow-md flex items-center justify-center text-[10px] text-temple-black font-utility font-bold border border-[#8B6914]/20 select-none">
+                  PD
+                </div>
+                <p className="font-serif-head text-sm italic text-deep-charcoal/90 leading-relaxed pr-8">
+                  "I offered the Morpankh Velvet Poshak for Rajbhog darshan today. The royal blue velvet shines beautifully in the evening oil lamps. Highly recommended."
+                </p>
+                <div className="mt-6 flex justify-between items-center text-[11px] font-utility tracking-wider text-temple-bronze border-t border-[#8B6914]/15 pt-4">
+                  <span>Aarav Sharma, New Delhi</span>
+                  <span>May 2026</span>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Submit Review Form Block (Visible only if logged in) */}
+        <div className="max-w-md mx-auto pt-8 border-t border-royal-gold/10">
+          {isLoggedIn ? (
+            <form onSubmit={handleReviewSubmit} className="glass-panel p-6 border border-royal-gold/15 space-y-4 rounded-sm">
+              <h3 className="font-display text-lg text-ivory text-center">Offer Handwritten Blessing</h3>
+              
+              <div className="space-y-1">
+                <label className="font-utility text-[10px] text-warm-beige/50 uppercase tracking-widest block">Rating (1 to 5 Stars)</label>
+                <div className="flex gap-2 justify-center">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setReviewRating(star)}
+                      className={`text-xl transition-all ${star <= reviewRating ? 'text-royal-gold' : 'text-warm-beige/25'}`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="font-utility text-[10px] text-warm-beige/50 uppercase tracking-widest block">Your Blessing / Experience</label>
+                <textarea
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  required
+                  placeholder="Share your spiritual offering experience..."
+                  rows={3}
+                  className="w-full bg-deep-charcoal border border-royal-gold/15 focus:border-royal-gold p-2 text-xs text-ivory outline-none rounded-sm resize-none"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={submittingReview}
+                className="w-full font-utility text-xs tracking-widest uppercase bg-royal-gold hover:bg-cream text-temple-black py-2.5 font-semibold transition-all rounded-sm disabled:opacity-50"
+              >
+                {submittingReview ? 'Sending Devotion...' : 'Offer Blessing 🙏'}
+              </button>
+
+              {submitError && <p className="text-[10px] text-lotus-pink text-center">{submitError}</p>}
+              {submitSuccess && <p className="text-[10px] text-vrindavan-green text-center">Your blessing has been offered successfully!</p>}
+            </form>
+          ) : (
+            <p className="text-center font-utility text-[10px] text-warm-beige/40 uppercase tracking-widest">
+              Please <Link href="/checkout" className="text-royal-gold hover:underline">sign in</Link> to share your blessing testimonials.
             </p>
-            
-            <div className="mt-6 flex justify-between items-center text-[11px] font-utility tracking-wider text-temple-bronze border-t border-[#8B6914]/15 pt-4">
-              <span>Srimati Radharani Dasi, Vrindavan</span>
-              <span>June 2026</span>
-            </div>
-          </div>
-
-          {/* Review 2 */}
-          <div className="parchment-card p-8 min-h-[160px] flex flex-col justify-between relative overflow-hidden">
-            <div className="absolute top-6 right-6 w-8 h-8 rounded-full bg-gradient-to-r from-brass to-royal-gold shadow-md flex items-center justify-center text-[10px] text-temple-black font-utility font-bold border border-[#8B6914]/20 select-none">
-              PD
-            </div>
-
-            <p className="font-serif-head text-sm italic text-deep-charcoal/90 leading-relaxed pr-8">
-              "I offered the Morpankh Velvet Poshak for Rajbhog darshan today. The royal blue velvet shines beautifully in the evening oil lamps. Highly recommended."
-            </p>
-
-            <div className="mt-6 flex justify-between items-center text-[11px] font-utility tracking-wider text-temple-bronze border-t border-[#8B6914]/15 pt-4">
-              <span>Aarav Sharma, New Delhi</span>
-              <span>May 2026</span>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -4,8 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import './globals.css';
 import Navbar from '@/components/Navbar';
-import CartDrawer from '@/components/CartDrawer';
-import AudioController from '@/components/AudioController';
+import ClientChrome from '@/components/ClientChrome';
 import LenisProvider from '@/components/LenisProvider';
 import { Icons } from '@/components/Icons';
 
@@ -57,8 +56,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="min-h-screen bg-temple-black font-body text-ivory antialiased">
         <Navbar />
-        <AudioController />
-        <CartDrawer />
+        <ClientChrome />
         <LenisProvider>
           <main>{children}</main>
         </LenisProvider>

@@ -12,10 +12,11 @@ server/dist/
 
 # Environment configurations containing secret keys
 .env
-.env.local
-.env.production
-.env.development
-.env.staging
+.env.*
+server/.env
+server/.env.*
+client/.env
+client/.env.*
 
 # Log files
 *.log

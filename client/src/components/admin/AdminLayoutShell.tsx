@@ -118,6 +118,7 @@ export default function AdminLayoutShell({ children }: AdminLayoutShellProps) {
           <div className="hidden lg:flex items-center gap-1.5 text-xs bg-slate-900/80 border border-slate-800 px-2 py-1 rounded-lg">
             <span className="text-slate-400 font-mono text-[10px] uppercase">Test Role:</span>
             <select
+              data-testid="admin-role-tester-select"
               value={userRole}
               onChange={(e) => {
                 const newRole = e.target.value as AdminRole;
@@ -131,7 +132,7 @@ export default function AdminLayoutShell({ children }: AdminLayoutShellProps) {
             >
               {Object.keys(ROLE_LABELS).map((roleKey) => (
                 <option key={roleKey} value={roleKey} className="bg-slate-900 text-slate-100">
-                  {ROLE_LABELS[roleKey as AdminRole].title}
+                  {ROLE_LABELS[roleKey as AdminRole].title} ({roleKey})
                 </option>
               ))}
             </select>

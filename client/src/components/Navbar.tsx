@@ -3,7 +3,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
 import { useCart } from '../store/useCart';
 import { useAuth } from '../store/useAuth';
 import { Icons } from './Icons';
@@ -46,8 +45,12 @@ const recentSearches = ['Janmashtami', 'Size 2 poshak', 'Mukut set'];
 const trendingSearches = ['Peacock blue', 'Shayan silk', 'Festival gifting'];
 
 export default function Navbar() {
-  const { getCartCount, setIsOpen } = useCart();
-  const { isLoggedIn, user, login, logout } = useAuth();
+  const cartCount = useCart((state) => state.items.reduce((sum, item) => sum + item.quantity, 0));
+  const setIsOpen = useCart((state) => state.setIsOpen);
+  const isLoggedIn = useAuth((state) => state.isLoggedIn);
+  const user = useAuth((state) => state.user);
+  const login = useAuth((state) => state.login);
+  const logout = useAuth((state) => state.logout);
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -56,7 +59,6 @@ export default function Navbar() {
   const [query, setQuery] = useState('');
   const accountRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
-  const cartCount = getCartCount();
 
   const displayName = user?.name?.trim() || 'Akhil';
   const initials = displayName
@@ -189,14 +191,9 @@ export default function Navbar() {
                 )}
               </button>
 
-              <AnimatePresence>
-                {accountOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 14, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.98 }}
-                    transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-                    className="luxury-popover absolute right-0 top-[calc(100%+14px)] w-[min(92vw,390px)] overflow-hidden rounded-[2rem] border border-royal-gold/20 bg-[#100d09]/88 p-4 text-cream shadow-[0_32px_90px_rgba(0,0,0,.48)] backdrop-blur-2xl"
+              {accountOpen && (
+                  <div
+                    className="luxury-popover absolute right-0 top-[calc(100%+14px)] animate-fade-down w-[min(92vw,390px)] overflow-hidden rounded-[2rem] border border-royal-gold/20 bg-[#100d09]/88 p-4 text-cream shadow-[0_32px_90px_rgba(0,0,0,.48)] backdrop-blur-2xl"
                   >
                     <div className="absolute inset-0 temple-grain opacity-20" />
                     <div className="relative space-y-4">
@@ -282,9 +279,8 @@ export default function Navbar() {
                         </>
                       )}
                     </div>
-                  </motion.div>
+                  </div>
                 )}
-              </AnimatePresence>
             </div>
 
             <button type="button" onClick={() => setIsOpen(true)} aria-label={`Open seva basket with ${mounted ? cartCount : 0} items`} className="nav-icon relative">
@@ -296,21 +292,13 @@ export default function Navbar() {
         </div>
       </header>
 
-      <AnimatePresence>
-        {searchOpen && (
-          <motion.div
-            className="fixed inset-0 z-[90] bg-temple-black/72 px-4 py-24 backdrop-blur-xl sm:px-8"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+      {searchOpen && (
+          <div
+            className="fixed inset-0 z-[90] bg-temple-black/72 px-4 py-24 backdrop-blur-xl sm:px-8 animate-fade-in"
           >
-            <motion.div
+            <div
               ref={searchRef}
-              initial={{ opacity: 0, y: 22, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 16, scale: 0.98 }}
-              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="relative mx-auto max-w-3xl overflow-hidden rounded-[2rem] border border-royal-gold/20 bg-[#100d09]/95 shadow-[0_40px_120px_rgba(0,0,0,.55)]"
+              className="relative mx-auto max-w-3xl overflow-hidden rounded-[2rem] animate-scale-in border border-royal-gold/20 bg-[#100d09]/95 shadow-[0_40px_120px_rgba(0,0,0,.55)]"
               role="dialog"
               aria-modal="true"
               aria-label="Luxury product search"
@@ -382,14 +370,12 @@ export default function Navbar() {
                   </Link>
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
         )}
-      </AnimatePresence>
 
-      <AnimatePresence>
-        {menuOpen && (
-          <motion.div className="fixed inset-0 z-[80] bg-[#0b0907]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+      {menuOpen && (
+          <div className="fixed inset-0 z-[80] bg-[#0b0907] animate-fade-in">
             <div className="absolute inset-0 temple-grain opacity-25" />
             <div className="relative flex h-full flex-col p-6 sm:p-10">
               <div className="flex items-center justify-between border-b border-royal-gold/15 pb-5">
@@ -397,25 +383,22 @@ export default function Navbar() {
                 <button onClick={() => setMenuOpen(false)} className="nav-icon" aria-label="Close menu"><Icons.Close size={22} /></button>
               </div>
               <nav className="my-auto flex flex-col" aria-label="Mobile navigation">
-                <motion.button
+                <button
                   type="button"
                   onClick={() => {
                     setMenuOpen(false);
                     setSearchOpen(true);
                   }}
-                  className="mb-4 flex items-center justify-between rounded-[1.4rem] border border-royal-gold/15 bg-royal-gold/[0.04] px-5 py-4 text-left font-utility text-[10px] uppercase tracking-[0.25em] text-cream/70"
-                  initial={{ opacity: 0, x: 24 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.08 }}
+                  className="mb-4 flex items-center justify-between rounded-[1.4rem] animate-slide-right border border-royal-gold/15 bg-royal-gold/[0.04] px-5 py-4 text-left font-utility text-[10px] uppercase tracking-[0.25em] text-cream/70"
                 >
                   Search Prem Dhaga <Icons.Search size={16} />
-                </motion.button>
+                </button>
                 {links.map((link, index) => (
-                  <motion.div key={link.href} initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 + index * 0.08 }}>
+                  <div key={link.href} className="animate-slide-right" style={{ animationDelay: `${100 + index * 80}ms` }}>
                     <Link href={link.href} onClick={() => setMenuOpen(false)} className="flex items-center justify-between border-b border-royal-gold/10 py-5 font-display text-4xl font-light text-ivory">
                       {link.label}<span className="font-utility text-[9px] tracking-widest text-royal-gold">0{index + 1}</span>
                     </Link>
-                  </motion.div>
+                  </div>
                 ))}
               </nav>
               <div className="flex items-center justify-between text-cream/45">
@@ -425,9 +408,8 @@ export default function Navbar() {
                 <span className="font-hindi text-xs" lang="hi">à¤°à¤¾à¤§à¥‡ à¤°à¤¾à¤§à¥‡</span>
               </div>
             </div>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
     </>
   );
 }

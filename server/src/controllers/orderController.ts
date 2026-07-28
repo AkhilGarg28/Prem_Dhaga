@@ -5,7 +5,7 @@ import { Order } from '../models/Order';
 import { Product } from '../models/Product';
 import { User } from '../models/User';
 import { Coupon } from '../models/Coupon';
-import { razorpayClient, sendEmail } from '../config/services';
+import { razorpayClient, sendEmail, createShiprocketOrder } from '../config/services';
 import { AuthenticatedRequest } from '../middleware/auth';
 
 // Create a new Order in DB and initiate Razorpay checkout order
@@ -311,6 +311,44 @@ export const simulatePaymentSuccess = async (req: Request, res: Response) => {
       }
     );
 
+    // Automatically push confirmed order to Shiprocket Logistics API
+    try {
+      const shiprocketResult = await createShiprocketOrder({
+        order_id: order.orderId,
+        order_date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+        pickup_location: 'Primary',
+        billing_customer_name: order.shippingDetails.name || 'Devotee',
+        billing_last_name: '',
+        billing_address: order.shippingDetails.address || 'Vrindavan',
+        billing_city: order.shippingDetails.city || 'Mathura',
+        billing_pincode: order.shippingDetails.zip || '281001',
+        billing_state: order.shippingDetails.state || 'Uttar Pradesh',
+        billing_country: 'India',
+        billing_email: order.shippingDetails.email || 'customer@premdhaga.com',
+        billing_phone: order.shippingDetails.phone || '9876543210',
+        shipping_is_billing: true,
+        order_items: order.items.map((it: any) => ({
+          name: it.name,
+          sku: `PD-POSHAK-${it.size}`,
+          units: it.quantity,
+          selling_price: it.price,
+        })),
+        payment_method: 'Prepaid',
+        sub_total: order.totalAmount,
+        length: 10,
+        breadth: 10,
+        height: 10,
+        weight: 0.5,
+      });
+
+      if (shiprocketResult && (shiprocketResult.awb_code || shiprocketResult.shipment_id)) {
+        order.courierPartner = shiprocketResult.courier_name || 'Shiprocket Logistics (Delhivery / BlueDart)';
+        order.trackingId = shiprocketResult.awb_code || `SR-${shiprocketResult.shipment_id}`;
+      }
+    } catch (srErr) {
+      console.warn('[Shiprocket Order Dispatch Error]', srErr);
+    }
+
     await order.save();
 
     // Stock is already decremented/reserved during order creation. No duplicate decrement on payment success.
@@ -583,6 +621,114 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
     }
 
     return res.status(200).json(order);
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// Simulate payment failure and release inventory
+export const simulatePaymentFailure = async (req: Request, res: Response) => {
+  try {
+    const { razorpayOrderId } = req.body;
+    const order = await Order.findOne({ razorpayOrderId }) as any;
+    if (!order) {
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    if (order.paymentStatus === 'failed') {
+      return res.status(200).json({ message: 'Order payment status already marked as failed.' });
+    }
+
+    order.paymentStatus = 'failed';
+    order.orderStatus = 'pending';
+    
+    order.trackingTimeline.push({
+      status: 'failed',
+      title: 'Payment Failed',
+      description: 'Transaction declined by issuer. Payment failed.',
+      location: 'Razorpay Gateway',
+      timestamp: new Date(),
+    });
+    
+    await order.save();
+
+    // Release/restore reserved stock in database since payment failed
+    for (const item of order.items) {
+      const isBundleAddon = typeof item.product === 'string' && String(item.product).endsWith('-bundle');
+      if (!isBundleAddon && item.product) {
+        await Product.findByIdAndUpdate(item.product, { $inc: { stock: item.quantity } });
+      }
+    }
+
+    return res.status(200).json({ message: 'Simulated payment failure successfully updated. Reserved inventory has been released.' });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// Aggregate dynamic Finance & GST statistics
+export const getFinanceReports = async (req: Request, res: Response) => {
+  try {
+    const paidOrders = await Order.find({ paymentStatus: 'paid' }).populate('items.product');
+    
+    let grossRevenue = 0;
+    let totalDiscounts = 0;
+    let totalShipping = 0;
+    let totalOrdersCount = paidOrders.length;
+    
+    // GST Slabs (5%, 12%, 18%)
+    const slabs: Record<number, any> = {
+      5: { category: 'Ready-made Poshaks (Cotton/Linen)', hsn: '6204', taxableValue: 0, cgstRate: 2.5, sgstRate: 2.5, totalGst: 0 },
+      12: { category: 'Ready-made Poshaks (Silk/Velvet)', hsn: '6204', taxableValue: 0, cgstRate: 6, sgstRate: 6, totalGst: 0 },
+      18: { category: 'Devotional Accessories (Mukut/Jewelry)', hsn: '7117', taxableValue: 0, cgstRate: 9, sgstRate: 9, totalGst: 0 },
+    };
+
+    for (const order of paidOrders) {
+      grossRevenue += order.totalAmount + (order.discountAmount || 0);
+      totalDiscounts += order.discountAmount || 0;
+      
+      for (const item of order.items) {
+        const dbProd = item.product as any;
+        const gstRate = dbProd?.gstRate || 12; // default to 12% if missing
+        const itemPrice = item.price * item.quantity;
+        
+        // Find which slab it goes to
+        const activeSlab = slabs[gstRate] || slabs[12];
+        
+        const taxableValue = itemPrice / (1 + gstRate / 100);
+        const totalGst = itemPrice - taxableValue;
+        
+        activeSlab.taxableValue += taxableValue;
+        activeSlab.totalGst += totalGst;
+      }
+    }
+
+    // Format tax liability reports
+    const gstBreakdown = Object.keys(slabs).map((rateKey) => {
+      const slab = slabs[Number(rateKey)];
+      return {
+        category: slab.category,
+        hsn: slab.hsn,
+        taxableValue: Number(slab.taxableValue.toFixed(2)),
+        cgstRate: slab.cgstRate,
+        sgstRate: slab.sgstRate,
+        totalGst: Number(slab.totalGst.toFixed(2)),
+      };
+    });
+
+    const totalGstCollected = gstBreakdown.reduce((sum, item) => sum + item.totalGst, 0);
+    const razorpayGatewayFees = grossRevenue * 0.02; // 2% gateway fee
+    const netSettledPayouts = Math.max(0, grossRevenue - totalDiscounts - razorpayGatewayFees);
+
+    return res.status(200).json({
+      grossRevenue,
+      totalDiscounts,
+      totalGstCollected: Number(totalGstCollected.toFixed(2)),
+      razorpayGatewayFees: Number(razorpayGatewayFees.toFixed(2)),
+      netSettledPayouts: Number(netSettledPayouts.toFixed(2)),
+      gstBreakdown,
+      totalOrdersCount
+    });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }

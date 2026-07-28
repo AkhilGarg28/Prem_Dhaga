@@ -1,39 +1,55 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import Lenis from 'lenis';
+
+type LenisInstance = {
+  raf: (time: number) => void;
+  destroy: () => void;
+};
 
 export const LenisProvider = ({ children }: { children: React.ReactNode }) => {
-  const lenisRef = useRef<Lenis | null>(null);
+  const lenisRef = useRef<LenisInstance | null>(null);
 
   useEffect(() => {
-    // Initialize Lenis smooth scroll
-    const lenis = new Lenis({
-      duration: 1.2,
-      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
-      orientation: 'vertical',
-      gestureOrientation: 'vertical',
-      smoothWheel: true,
-      wheelMultiplier: 1.0,
-      touchMultiplier: 1.5,
-    });
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-    lenisRef.current = lenis;
+    let cancelled = false;
+    let rafId = 0;
 
-    // Connect to requestAnimationFrame
-    let rafId: number;
-    const raf = (time: number) => {
-      lenis.raf(time);
+    const startLenis = async () => {
+      const { default: Lenis } = await import('lenis');
+      if (cancelled) return;
+
+      const lenis = new Lenis({
+        duration: 1.2,
+        easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+        orientation: 'vertical',
+        gestureOrientation: 'vertical',
+        smoothWheel: true,
+        wheelMultiplier: 1.0,
+        touchMultiplier: 1.5,
+      }) as LenisInstance;
+
+      lenisRef.current = lenis;
+
+      const raf = (time: number) => {
+        lenis.raf(time);
+        rafId = requestAnimationFrame(raf);
+      };
       rafId = requestAnimationFrame(raf);
     };
-    rafId = requestAnimationFrame(raf);
+
+    startLenis().catch(() => {});
 
     return () => {
-      lenis.destroy();
-      cancelAnimationFrame(rafId);
+      cancelled = true;
+      if (rafId) cancelAnimationFrame(rafId);
+      lenisRef.current?.destroy();
+      lenisRef.current = null;
     };
   }, []);
 
   return <>{children}</>;
 };
+
 export default LenisProvider;

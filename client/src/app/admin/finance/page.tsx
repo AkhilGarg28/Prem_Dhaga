@@ -1,14 +1,47 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import AdminRBACGuard from '@/components/admin/AdminRBACGuard';
 
 export default function AdminFinancePage() {
-  const gstBreakdown = [
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchFinanceData = async () => {
+    try {
+      const authData = localStorage.getItem('prem-dhaga-auth');
+      const token = authData ? JSON.parse(authData).state.token : '';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+      
+      const res = await fetch(`${apiUrl}/orders/finance-reports`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setData(json);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch dynamic finance data, falling back to mock data', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchFinanceData();
+  }, []);
+
+  const defaultGstBreakdown = [
     { category: 'Ready-made Poshaks (Silk/Velvet)', hsn: '6204', taxableValue: 382000, cgstRate: 6, sgstRate: 6, totalGst: 45840 },
     { category: 'Bespoke Custom Orders', hsn: '6211', taxableValue: 75000, cgstRate: 6, sgstRate: 6, totalGst: 9000 },
     { category: 'Devotional Accessories (Mukut/Jewelry)', hsn: '7117', taxableValue: 25500, cgstRate: 9, sgstRate: 9, totalGst: 4590 },
   ];
+
+  const gstBreakdown = data?.gstBreakdown || defaultGstBreakdown;
+  const grossRevenue = data ? data.grossRevenue : 482500;
+  const totalGstCollected = data ? data.totalGstCollected : 59430;
+  const razorpayGatewayFees = data ? data.razorpayGatewayFees : 9650;
+  const netSettledPayouts = data ? data.netSettledPayouts : 413420;
 
   const handleExportGstCsv = () => {
     const csvContent =
@@ -16,7 +49,7 @@ export default function AdminFinancePage() {
       ['Category,HSN Code,Taxable Value,CGST,SGST,Total GST Collected']
         .concat(
           gstBreakdown.map(
-            (g) => `"${g.category}",${g.hsn},${g.taxableValue},${(g.taxableValue * g.cgstRate) / 100},${(g.taxableValue * g.sgstRate) / 100},${g.totalGst}`
+            (g: any) => `"${g.category}",${g.hsn},${g.taxableValue},${(g.taxableValue * g.cgstRate) / 100},${(g.taxableValue * g.sgstRate) / 100},${g.totalGst}`
           )
         )
         .join('\n');
@@ -51,23 +84,23 @@ export default function AdminFinancePage() {
         {/* Finance Widgets */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 font-mono text-xs">
           <div className="p-4 rounded-xl bg-[#12141D] border border-slate-800 space-y-1">
-            <p className="text-[10px] text-slate-400 uppercase">Gross Revenue (Jul 2026)</p>
-            <p className="text-xl font-bold text-slate-100">₹4,82,500</p>
+            <p className="text-[10px] text-slate-400 uppercase">Gross Revenue</p>
+            <p className="text-xl font-bold text-slate-100">₹{grossRevenue.toLocaleString('en-IN')}</p>
           </div>
 
           <div className="p-4 rounded-xl bg-[#12141D] border border-slate-800 space-y-1">
             <p className="text-[10px] text-slate-400 uppercase">Total GST Collected</p>
-            <p className="text-xl font-bold text-amber-300">₹59,430</p>
+            <p className="text-xl font-bold text-amber-300">₹{totalGstCollected.toLocaleString('en-IN')}</p>
           </div>
 
           <div className="p-4 rounded-xl bg-[#12141D] border border-slate-800 space-y-1">
             <p className="text-[10px] text-slate-400 uppercase">Razorpay Gateway Fees</p>
-            <p className="text-xl font-bold text-slate-300">₹9,650</p>
+            <p className="text-xl font-bold text-slate-300">₹{razorpayGatewayFees.toLocaleString('en-IN')}</p>
           </div>
 
           <div className="p-4 rounded-xl bg-[#12141D] border border-slate-800 space-y-1">
             <p className="text-[10px] text-slate-400 uppercase">Net Settled Payouts</p>
-            <p className="text-xl font-bold text-emerald-400">₹4,13,420</p>
+            <p className="text-xl font-bold text-emerald-400">₹{netSettledPayouts.toLocaleString('en-IN')}</p>
           </div>
         </div>
 
@@ -90,7 +123,7 @@ export default function AdminFinancePage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-slate-200">
-                {gstBreakdown.map((row, idx) => (
+                {gstBreakdown.map((row: any, idx: number) => (
                   <tr key={idx} className="hover:bg-slate-800/40">
                     <td className="py-3.5 px-4 font-sans font-medium text-slate-100">{row.category}</td>
                     <td className="py-3.5 px-4 text-amber-300">{row.hsn}</td>

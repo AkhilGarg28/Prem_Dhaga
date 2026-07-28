@@ -89,15 +89,11 @@ const nextConfig = {
     ];
   },
 
-  // ─── Webpack: Prevent Browser-Only Packages from SSR Bundle ─────────────────
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      config.externals = [
-        ...(Array.isArray(config.externals) ? config.externals : []),
-        'howler',
-      ];
-    }
-    return config;
+  // ─── Experimental: Turbopack + Server External Packages ─────────────────────
+  experimental: {
+    // Prevents browser-only packages from being bundled into the server runtime.
+    // Works with both Turbopack (dev) and Webpack (production builds).
+    serverComponentsExternalPackages: ['howler'],
   },
 };
 

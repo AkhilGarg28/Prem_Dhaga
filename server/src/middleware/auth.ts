@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { AuditLog } from '../models/AuditLog';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'prem_dhaga_dev_secret_key_108';
 
@@ -38,6 +39,15 @@ export const authorizeRoles = (...roles: string[]) => {
       return res.status(401).json({ error: 'User is not authenticated' });
     }
     if (!roles.includes(authReq.user.role)) {
+      // Record unauthorized attempt in Audit Log
+      const audit = new AuditLog({
+        userId: authReq.user.id,
+        action: 'UNAUTHORIZED_ACCESS_BLOCKED',
+        details: `User blocked from accessing route: ${req.method} ${req.originalUrl}. Required roles: [${roles.join(', ')}]`,
+        ipAddress: req.ip,
+      });
+      audit.save().catch(err => console.error('Failed to save audit log for blocked action:', err));
+
       return res.status(403).json({ error: 'Access forbidden: insufficient permissions' });
     }
     next();

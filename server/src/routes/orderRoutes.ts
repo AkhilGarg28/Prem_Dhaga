@@ -3,6 +3,8 @@ import {
   createOrder,
   verifyPayment,
   simulatePaymentSuccess,
+  simulatePaymentFailure,
+  getFinanceReports,
   razorpayWebhook,
   getMyOrders,
   getOrderById,
@@ -20,6 +22,7 @@ const router = Router();
 router.post('/', checkoutLimiter, createOrder);  // checkout rate-limited
 router.post('/verify-payment', verifyPayment);
 router.post('/simulate-success', simulatePaymentSuccess);
+router.post('/simulate-failure', simulatePaymentFailure);
 router.post('/webhook', razorpayWebhook);
 
 // Customer order routes
@@ -28,6 +31,7 @@ router.get('/detail/:id', getOrderById);
 router.post('/:id/cancel', authenticateJWT, cancelOrder);
 
 // Admin order routes
+router.get('/finance-reports', authenticateJWT, authorizeRoles('admin', 'manager', 'finance_manager', 'super_admin'), getFinanceReports);
 router.get('/', authenticateJWT, authorizeRoles('admin', 'manager', 'orders_manager', 'super_admin'), getAllOrders);
 router.put('/:id/courier', authenticateJWT, authorizeRoles('admin', 'manager', 'orders_manager', 'super_admin'), updateOrderCourier);
 router.put('/:id/status', authenticateJWT, authorizeRoles('admin', 'manager', 'orders_manager', 'super_admin'), updateOrderStatus);
