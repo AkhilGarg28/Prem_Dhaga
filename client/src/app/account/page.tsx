@@ -144,6 +144,27 @@ export default function AccountDashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoggedIn, token, activeTab, orderStatusFilter, user]);
 
+  // Lock body/html scrolling and pause Lenis smooth scroll when mobile drawer is open
+  useEffect(() => {
+    if (mobileDrawerOpen) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+      (window as any).lenis?.stop();
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      document.body.style.touchAction = '';
+      (window as any).lenis?.start();
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      document.body.style.touchAction = '';
+      (window as any).lenis?.start();
+    };
+  }, [mobileDrawerOpen]);
+
 
   // Submit Profile update
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -350,22 +371,34 @@ export default function AccountDashboardPage() {
 
         {/* MOBILE SLIDE-IN ACCOUNT DRAWER (< 768px) */}
         {mobileDrawerOpen && (
-          <div className="md:hidden fixed inset-0 z-[100] bg-temple-black/85 backdrop-blur-xl flex justify-end animate-fade-in">
-            <div className="w-full max-w-full sm:max-w-[420px] h-full bg-[#120e0a] border-l border-royal-gold/25 flex flex-col relative shadow-[0_0_80px_rgba(0,0,0,0.8)]">
+          <div className="md:hidden fixed inset-0 z-[9999] overflow-hidden flex justify-end">
+            {/* FULL SCREEN BACKDROP VEIL */}
+            <div
+              className="fixed inset-0 bg-black/85 backdrop-blur-2xl z-[9998] animate-fade-in"
+              onClick={() => setMobileDrawerOpen(false)}
+            />
+
+            {/* FULL HEIGHT LUXURY GLASS DRAWER PANEL */}
+            <div
+              className="fixed inset-y-0 right-0 z-[9999] w-full max-w-full sm:max-w-[420px] h-full h-[100dvh] bg-[#100d09] border-l border-royal-gold/25 flex flex-col relative shadow-[0_0_90px_rgba(0,0,0,0.9)] overflow-hidden"
+            >
               <div className="absolute inset-0 temple-grain opacity-20 pointer-events-none" />
 
               {/* FIXED MOBILE HEADER */}
-              <div className="relative p-6 border-b border-royal-gold/15 bg-royal-gold/[0.04] flex items-center justify-between shrink-0">
+              <div
+                className="relative p-6 border-b border-royal-gold/15 bg-royal-gold/[0.04] flex items-center justify-between shrink-0 z-10"
+                style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}
+              >
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-full border-2 border-royal-gold/40 bg-royal-gold/10 overflow-hidden relative flex items-center justify-center shadow-md">
+                  <div className="w-14 h-14 rounded-full border-2 border-royal-gold/40 bg-royal-gold/10 overflow-hidden relative flex items-center justify-center shadow-md shrink-0">
                     {user?.profilePhoto ? (
                       <Image src={user.profilePhoto} alt="" fill sizes="56px" className="object-cover" />
                     ) : (
                       <Icons.User className="text-royal-gold" size={28} />
                     )}
                   </div>
-                  <div>
-                    <h2 className="font-display text-xl text-ivory">{user?.name}</h2>
+                  <div className="min-w-0">
+                    <h2 className="font-display text-xl text-ivory truncate">{user?.name}</h2>
                     <p className="font-utility text-[9px] uppercase tracking-[0.22em] text-royal-gold mt-0.5">
                       {user?.role || 'Customer'} • 1080 Seva Points
                     </p>
@@ -374,21 +407,24 @@ export default function AccountDashboardPage() {
 
                 <button
                   onClick={() => setMobileDrawerOpen(false)}
-                  className="w-9 h-9 rounded-full border border-royal-gold/20 flex items-center justify-center text-warm-beige/60 hover:text-royal-gold hover:border-royal-gold transition-all"
+                  className="w-10 h-10 rounded-full border border-royal-gold/20 flex items-center justify-center text-warm-beige/60 hover:text-royal-gold hover:border-royal-gold transition-all shrink-0 active:scale-95"
                   aria-label="Close mobile account menu"
                 >
-                  <Icons.Close size={18} />
+                  <Icons.Close size={20} />
                 </button>
               </div>
 
-              {/* SCROLLABLE TOUCH CARDS MENU */}
-              <div className="relative flex-1 overflow-y-auto p-4 space-y-3 pb-28">
+              {/* SCROLLABLE TOUCH CARDS MENU (INTERNAL SCROLL ONLY) */}
+              <div
+                className="relative flex-1 overflow-y-auto overflow-x-hidden p-5 space-y-3 overscroll-contain touch-pan-y"
+                style={{ paddingBottom: 'max(4rem, env(safe-area-inset-bottom))' }}
+              >
                 <button
                   onClick={() => { setActiveTab('profile'); setMobileDrawerOpen(false); }}
                   className={`mobile-touch-card ${activeTab === 'profile' ? 'mobile-touch-card-active' : ''}`}
                 >
                   <span>My Profile</span>
-                  <Icons.ArrowRight size={15} />
+                  <Icons.ArrowRight size={16} />
                 </button>
 
                 <button
@@ -396,7 +432,7 @@ export default function AccountDashboardPage() {
                   className={`mobile-touch-card ${activeTab === 'orders' ? 'mobile-touch-card-active' : ''}`}
                 >
                   <span>My Orders</span>
-                  <Icons.ArrowRight size={15} />
+                  <Icons.ArrowRight size={16} />
                 </button>
 
                 <button
@@ -404,7 +440,7 @@ export default function AccountDashboardPage() {
                   className="mobile-touch-card"
                 >
                   <span>Track Orders</span>
-                  <Icons.ArrowRight size={15} />
+                  <Icons.ArrowRight size={16} />
                 </button>
 
                 <button
@@ -412,7 +448,7 @@ export default function AccountDashboardPage() {
                   className={`mobile-touch-card ${activeTab === 'wishlist' ? 'mobile-touch-card-active' : ''}`}
                 >
                   <span>Spiritual Wishlist</span>
-                  <Icons.ArrowRight size={15} />
+                  <Icons.ArrowRight size={16} />
                 </button>
 
                 <button
@@ -420,7 +456,7 @@ export default function AccountDashboardPage() {
                   className={`mobile-touch-card ${activeTab === 'addresses' ? 'mobile-touch-card-active' : ''}`}
                 >
                   <span>Saved Addresses</span>
-                  <Icons.ArrowRight size={15} />
+                  <Icons.ArrowRight size={16} />
                 </button>
 
                 <button
@@ -428,7 +464,7 @@ export default function AccountDashboardPage() {
                   className="mobile-touch-card"
                 >
                   <span>Payment Methods</span>
-                  <Icons.ArrowRight size={15} />
+                  <Icons.ArrowRight size={16} />
                 </button>
 
                 <button
@@ -436,7 +472,7 @@ export default function AccountDashboardPage() {
                   className="mobile-touch-card"
                 >
                   <span>Notifications</span>
-                  <Icons.ArrowRight size={15} />
+                  <Icons.ArrowRight size={16} />
                 </button>
 
                 <button
@@ -444,7 +480,7 @@ export default function AccountDashboardPage() {
                   className={`mobile-touch-card ${activeTab === 'support' ? 'mobile-touch-card-active' : ''}`}
                 >
                   <span>Support Desk</span>
-                  <Icons.ArrowRight size={15} />
+                  <Icons.ArrowRight size={16} />
                 </button>
 
                 <div className="h-[1px] bg-royal-gold/10 my-2" />
@@ -454,7 +490,7 @@ export default function AccountDashboardPage() {
                   className="mobile-touch-card mobile-touch-card-danger"
                 >
                   <span>Logout Portal</span>
-                  <Icons.ArrowRight size={15} />
+                  <Icons.ArrowRight size={16} />
                 </button>
               </div>
             </div>

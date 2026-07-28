@@ -4,6 +4,8 @@ import React, { useEffect, useRef } from 'react';
 
 type LenisInstance = {
   raf: (time: number) => void;
+  stop: () => void;
+  start: () => void;
   destroy: () => void;
 };
 
@@ -31,6 +33,7 @@ export const LenisProvider = ({ children }: { children: React.ReactNode }) => {
       }) as LenisInstance;
 
       lenisRef.current = lenis;
+      (window as any).lenis = lenis;
 
       const raf = (time: number) => {
         lenis.raf(time);
@@ -44,6 +47,7 @@ export const LenisProvider = ({ children }: { children: React.ReactNode }) => {
     return () => {
       cancelled = true;
       if (rafId) cancelAnimationFrame(rafId);
+      (window as any).lenis = null;
       lenisRef.current?.destroy();
       lenisRef.current = null;
     };

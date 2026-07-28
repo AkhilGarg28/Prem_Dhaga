@@ -55,7 +55,26 @@ export default function Navbar() {
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [accountOpen, setAccountOpen] = useState(false);
+  // Lock body/html scroll when account drawer or mobile menu overlay is open
+  useEffect(() => {
+    if (accountOpen || menuOpen) {
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+      (window as any).lenis?.stop();
+    } else {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      document.body.style.touchAction = '';
+      (window as any).lenis?.start();
+    }
+    return () => {
+      document.body.style.overflow = '';
+      document.documentElement.style.overflow = '';
+      document.body.style.touchAction = '';
+      (window as any).lenis?.start();
+    };
+  }, [accountOpen, menuOpen]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
@@ -187,25 +206,39 @@ export default function Navbar() {
               </button>
 
               {accountOpen && (
+                <>
+                  {/* FULL SCREEN BACKDROP VEIL ON MOBILE */}
                   <div
-                    className="luxury-popover fixed inset-y-0 right-0 z-[100] w-full max-w-full sm:max-w-[420px] h-full overflow-y-auto bg-[#100d09]/95 backdrop-blur-2xl border-l border-royal-gold/25 p-6 pb-28 text-cream shadow-[0_32px_90px_rgba(0,0,0,.75)] md:absolute md:inset-auto md:right-0 md:top-[calc(100%+14px)] md:w-[390px] md:h-auto md:max-h-[85vh] md:rounded-[2rem] md:border md:p-5 md:pb-6 animate-fade-in"
+                    className="fixed inset-0 bg-black/85 backdrop-blur-2xl z-[9998] md:hidden animate-fade-in"
+                    onClick={closeOverlays}
+                  />
+
+                  <div
+                    className="luxury-popover fixed inset-y-0 right-0 z-[9999] w-full max-w-full sm:max-w-[420px] h-full h-[100dvh] flex flex-col bg-[#100d09] border-l border-royal-gold/25 text-cream shadow-[0_32px_90px_rgba(0,0,0,.85)] overflow-hidden md:absolute md:inset-auto md:right-0 md:top-[calc(100%+14px)] md:w-[390px] md:h-auto md:max-h-[85vh] md:rounded-[2rem] md:border md:shadow-2xl animate-fade-in"
                   >
                     <div className="absolute inset-0 temple-grain opacity-20 pointer-events-none" />
 
-                    {/* MOBILE DRAWER HEADER CLOSE BUTTON */}
-                    <div className="flex items-center justify-between border-b border-royal-gold/15 pb-4 mb-4 md:hidden">
+                    {/* MOBILE DRAWER FIXED HEADER */}
+                    <div
+                      className="flex items-center justify-between border-b border-royal-gold/15 bg-royal-gold/[0.04] p-5 shrink-0 z-10 md:hidden"
+                      style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}
+                    >
                       <span className="font-display text-lg tracking-[0.15em] text-ivory">PREM DHAGA ACCOUNT</span>
                       <button
                         type="button"
                         onClick={closeOverlays}
-                        className="w-9 h-9 rounded-full border border-royal-gold/20 flex items-center justify-center text-warm-beige/60 hover:text-royal-gold transition-colors"
+                        className="w-10 h-10 rounded-full border border-royal-gold/20 flex items-center justify-center text-warm-beige/60 hover:text-royal-gold transition-colors shrink-0 active:scale-95"
                         aria-label="Close account menu"
                       >
-                        <Icons.Close size={18} />
+                        <Icons.Close size={20} />
                       </button>
                     </div>
 
-                    <div className="relative space-y-4">
+                    {/* SCROLLABLE MENU CONTAINER */}
+                    <div
+                      className="relative flex-1 overflow-y-auto overflow-x-hidden p-5 space-y-4 overscroll-contain touch-pan-y md:p-0 md:overflow-y-auto"
+                      style={{ paddingBottom: 'max(4rem, env(safe-area-inset-bottom))' }}
+                    >
                       {!isLoggedIn ? (
                         <>
                           <div className="rounded-[1.4rem] border border-royal-gold/15 bg-royal-gold/[0.04] p-5">
@@ -218,11 +251,11 @@ export default function Navbar() {
                           <div className="grid gap-3">
                             <button type="button" onClick={() => openAuth('login')} className="mobile-touch-card">
                               <span>Sign In with Credentials</span>
-                              <Icons.ArrowRight size={15} />
+                              <Icons.ArrowRight size={16} />
                             </button>
                             <button type="button" onClick={() => openAuth('register')} className="mobile-touch-card">
                               <span>Create Devotional ID</span>
-                              <Icons.ArrowRight size={15} />
+                              <Icons.ArrowRight size={16} />
                             </button>
                           </div>
 
@@ -266,7 +299,7 @@ export default function Navbar() {
                             ].map(([label, href]) => (
                               <Link key={label} href={href} onClick={closeOverlays} className="mobile-touch-card">
                                 <span>{label}</span>
-                                <Icons.ArrowRight size={15} />
+                                <Icons.ArrowRight size={16} />
                               </Link>
                             ))}
                             <button
@@ -278,14 +311,15 @@ export default function Navbar() {
                               className="mobile-touch-card mobile-touch-card-danger"
                             >
                               <span>Logout</span>
-                              <Icons.ArrowRight size={15} />
+                              <Icons.ArrowRight size={16} />
                             </button>
                           </div>
                         </>
                       )}
                     </div>
                   </div>
-                )}
+                </>
+              )}
             </div>
 
             <button type="button" onClick={() => setIsOpen(true)} aria-label={`Open seva basket with ${mounted ? cartCount : 0} items`} className="nav-icon relative">
