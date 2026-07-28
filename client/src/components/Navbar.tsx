@@ -55,6 +55,7 @@ export default function Navbar() {
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   // Lock body/html scroll when account drawer or mobile menu overlay is open
   useEffect(() => {
     if (accountOpen || menuOpen) {
