@@ -307,14 +307,21 @@ export default function AccountDashboardPage() {
     );
   }
 
-  if (!isLoggedIn) return null;
-
   return (
-    <div className="min-h-screen bg-temple-black pt-28 pb-20 px-6 md:px-12 flex flex-col justify-start">
-      <div className="max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-4 gap-8 items-start">
+    <div className="min-h-screen bg-temple-black pt-28 pb-20 px-6 md:px-12 flex flex-col justify-start relative">
+      {/* Ambient Page Background & Glow for Continuous Glassmorphism Reflection */}
+      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+        <Image src="/images/prem-dhaga-hero.png" alt="" fill sizes="100vw" className="object-cover opacity-[0.15]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0d0b08]/75 via-[#0d0b08]/90 to-[#0d0b08]" />
+        <div className="absolute inset-0 temple-grain opacity-30" />
+        <div className="absolute top-1/4 left-10 w-96 h-96 rounded-full bg-royal-gold/12 blur-[100px]" />
+        <div className="absolute bottom-1/3 right-10 w-[500px] h-[500px] rounded-full bg-peacock-blue/12 blur-[130px]" />
+      </div>
+
+      <div className="max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-4 gap-8 items-start relative z-10">
         
         {/* LEFT COLUMN: LUXURY NAVIGATION SIDEBAR */}
-        <div className="glass-panel p-6 border border-royal-gold/15 rounded-sm space-y-6">
+        <div className="profile-glass-card p-6 md:sticky md:top-28 z-20 space-y-6">
           <div className="text-center space-y-2 border-b border-royal-gold/10 pb-4">
             <div className="w-16 h-16 rounded-full border border-royal-gold/30 mx-auto overflow-hidden bg-deep-charcoal flex items-center justify-center relative">
               {user?.profilePhoto ? (
