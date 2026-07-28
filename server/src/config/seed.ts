@@ -1,11 +1,46 @@
+import bcrypt from 'bcrypt';
 import { Collection } from '../models/Collection';
 import { Product } from '../models/Product';
+import { User } from '../models/User';
+
+export const seedAdminAccount = async () => {
+  try {
+    const adminEmail = 'krishna@premdhaga.com';
+    const adminPasswordRaw = 'poshakmadewithlove@143';
+
+    let adminUser = await User.findOne({ email: adminEmail });
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(adminPasswordRaw, salt);
+
+    if (!adminUser) {
+      adminUser = new User({
+        name: 'Krishna Admin',
+        email: adminEmail,
+        password: hashedPassword,
+        phone: '+919876543210',
+        role: 'super_admin',
+        sevaPoints: 10000,
+      });
+      await adminUser.save();
+      console.log(`[Admin Seed] Created admin account: ${adminEmail}`);
+    } else {
+      adminUser.role = 'super_admin';
+      adminUser.password = hashedPassword;
+      await adminUser.save();
+      console.log(`[Admin Seed] Updated admin account: ${adminEmail}`);
+    }
+  } catch (error) {
+    console.error('Error seeding admin account:', error);
+  }
+};
 
 export const seedDatabase = async () => {
   try {
+    await seedAdminAccount();
+
     const collectionsCount = await Collection.countDocuments();
     if (collectionsCount > 0) {
-      console.log('Database already has data. Skipping seed.');
+      console.log('Database already has data. Skipping catalog seed.');
       return;
     }
 

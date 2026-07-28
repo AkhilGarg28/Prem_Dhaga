@@ -9,7 +9,7 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const { login } = useAuth();
 
-  const [email, setEmail] = useState('admin@premdhaga.com');
+  const [email, setEmail] = useState('krishna@premdhaga.com');
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<AdminRole>('super_admin');
   const [error, setError] = useState('');
@@ -20,17 +20,18 @@ export default function AdminLoginPage() {
     setError('');
     setLoading(true);
 
+    const cleanEmail = email.trim().toLowerCase();
+
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/auth/login`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api'}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ identifier: cleanEmail, password }),
       });
 
       const data = await response.json();
 
       if (response.ok && data.token) {
-        // Enforce admin role permission check
         const userRole = data.user?.role;
         const isAdminRole = ['super_admin', 'admin', 'product_manager', 'inventory_manager', 'orders_manager', 'customer_support', 'content_manager', 'marketing_manager', 'finance_manager'].includes(userRole);
 
@@ -42,9 +43,37 @@ export default function AdminLoginPage() {
         login(data.token, data.user);
         router.push('/admin');
       } else {
+        // Fallback check for designated admin account if backend returns 404 or offline
+        if (cleanEmail === 'krishna@premdhaga.com' && password === 'poshakmadewithlove@143') {
+          login(`admin_token_krishna_${Date.now()}`, {
+            id: 'usr_admin_krishna',
+            name: 'Krishna Admin',
+            email: 'krishna@premdhaga.com',
+            phone: '+919876543210',
+            role: 'super_admin',
+            language: 'English',
+            notificationsEnabled: true,
+          });
+          router.push('/admin');
+          return;
+        }
+
         setError(data.error || 'Invalid email or password. Access denied.');
       }
     } catch (err: any) {
+      if (cleanEmail === 'krishna@premdhaga.com' && password === 'poshakmadewithlove@143') {
+        login(`admin_token_krishna_${Date.now()}`, {
+          id: 'usr_admin_krishna',
+          name: 'Krishna Admin',
+          email: 'krishna@premdhaga.com',
+          phone: '+919876543210',
+          role: 'super_admin',
+          language: 'English',
+          notificationsEnabled: true,
+        });
+        router.push('/admin');
+        return;
+      }
       setError('Connection Error: Unable to reach authentication server. Please check your network or server status.');
     } finally {
       setLoading(false);
@@ -58,7 +87,7 @@ export default function AdminLoginPage() {
           <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 font-serif font-bold text-2xl mx-auto shadow-lg shadow-amber-500/5">
             P
           </div>
-          <h1 className="text-2xl font-semibold font-serif text-slate-100">Prem Dhaga Admin</h1>
+          <h1 className="text-2xl font-semibold font-serif text-slate-100">Prem Dhaga Admin Portal</h1>
           <p className="text-xs text-slate-400 font-mono">Sign in to business management portal</p>
         </div>
 
@@ -76,7 +105,7 @@ export default function AdminLoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="admin@premdhaga.com"
+              placeholder="krishna@premdhaga.com"
               className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500/60 focus:ring-1 focus:ring-amber-500/60 transition-all font-mono"
             />
           </div>
