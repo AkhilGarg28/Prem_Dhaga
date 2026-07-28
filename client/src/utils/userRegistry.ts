@@ -13,57 +13,17 @@ export interface RegisteredUser {
 
 const REGISTRY_KEY = 'prem-dhaga-registered-users';
 
-// Pre-seeded default registered accounts to guarantee recognition
-const DEFAULT_REGISTERED_USERS: RegisteredUser[] = [
-  {
-    id: 'usr_akhil_01',
-    name: 'Akhil Garg',
-    email: 'akhilgarg064@gmail.com',
-    phone: '+919876543210',
-    password: '', // Matches any provided password if empty, or can match exact
-    role: 'customer',
-    language: 'English',
-    notificationsEnabled: true,
-    preferredPaymentMethod: 'Razorpay',
-  },
-  {
-    id: 'usr_admin_01',
-    name: 'Admin User',
-    email: 'admin@premdhaga.com',
-    phone: '+919999999999',
-    password: '',
-    role: 'super_admin',
-    language: 'English',
-    notificationsEnabled: true,
-    preferredPaymentMethod: 'Razorpay',
-  },
-];
+// Registered accounts registry - only real accounts created by users
+const DEFAULT_REGISTERED_USERS: RegisteredUser[] = [];
 
 export const getRegisteredUsers = (): RegisteredUser[] => {
   if (typeof window === 'undefined') return DEFAULT_REGISTERED_USERS;
   try {
     const data = localStorage.getItem(REGISTRY_KEY);
     const currentUsers: RegisteredUser[] = data ? JSON.parse(data) : [];
-
-    // Ensure pre-seeded accounts exist
-    let modified = false;
-    DEFAULT_REGISTERED_USERS.forEach((defUser) => {
-      const exists = currentUsers.some(
-        (u) => u.email.toLowerCase() === defUser.email.toLowerCase()
-      );
-      if (!exists) {
-        currentUsers.push(defUser);
-        modified = true;
-      }
-    });
-
-    if (modified || !data) {
-      localStorage.setItem(REGISTRY_KEY, JSON.stringify(currentUsers));
-    }
-
     return currentUsers;
   } catch (e) {
-    return DEFAULT_REGISTERED_USERS;
+    return [];
   }
 };
 

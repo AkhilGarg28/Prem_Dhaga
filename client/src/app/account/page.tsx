@@ -78,19 +78,7 @@ export default function AccountDashboardPage() {
         setOrders(data);
       }
     } catch (err) {
-      console.warn('Backend connection offline. Utilizing local mockup order list.');
-      setOrders([
-        {
-          _id: 'ord_mock_1',
-          orderId: 'PD-172948234-108',
-          totalAmount: 2100,
-          paymentStatus: 'paid',
-          orderStatus: 'preparing',
-          shippingDetails: { name: user?.name, phone: user?.phone, address: 'Vrindavan Dham' },
-          items: [{ product: 'prod_1', name: 'Lotus Shringaar Poshak', price: 2100, quantity: 1, size: 2, swatchName: 'Lotus Pink' }],
-          createdAt: new Date().toISOString(),
-        },
-      ]);
+      setOrders([]);
     } finally {
       setOrdersLoading(false);
     }
@@ -400,7 +388,7 @@ export default function AccountDashboardPage() {
                   <div className="min-w-0">
                     <h2 className="font-display text-xl text-ivory truncate">{user?.name}</h2>
                     <p className="font-utility text-[9px] uppercase tracking-[0.22em] text-royal-gold mt-0.5">
-                      {user?.role || 'Customer'} • 1080 Seva Points
+                      {user?.role || 'Customer'} • {(user as any)?.sevaPoints || 0} Seva Points
                     </p>
                   </div>
                 </div>
@@ -436,7 +424,7 @@ export default function AccountDashboardPage() {
                 </button>
 
                 <button
-                  onClick={() => { setMobileDrawerOpen(false); router.push('/order/PD-172948234-108'); }}
+                  onClick={() => { setActiveTab('orders'); setMobileDrawerOpen(false); }}
                   className="mobile-touch-card"
                 >
                   <span>Track Orders</span>
@@ -581,7 +569,7 @@ export default function AccountDashboardPage() {
               ) : orders.length === 0 ? (
                 <div className="text-center py-12 glass-panel border border-royal-gold/10 rounded-sm">
                   <Icons.PeacockFeather className="mx-auto text-royal-gold/10 mb-2" size={40} />
-                  <p className="font-display text-base text-warm-beige/50 italic">"No order chronicles found."</p>
+                  <p className="font-display text-base text-warm-beige/50 italic">You haven't placed any orders yet.</p>
                   <Link href="/collections" className="font-utility text-[10px] text-royal-gold uppercase tracking-wider border border-royal-gold/20 hover:border-royal-gold px-4 py-1.5 mt-4 inline-block">
                     Begin Shopping
                   </Link>
@@ -894,7 +882,7 @@ export default function AccountDashboardPage() {
 
               {addresses.length === 0 ? (
                 <div className="text-center py-12 glass-panel border border-royal-gold/10 rounded-sm font-display text-sm text-warm-beige/50 italic">
-                  "No saved delivery locations."
+                  No saved addresses.
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -937,7 +925,7 @@ export default function AccountDashboardPage() {
 
               {wishlist.length === 0 ? (
                 <div className="text-center py-12 glass-panel border border-royal-gold/10 rounded-sm font-display text-sm text-warm-beige/50 italic">
-                  "Your wishlist is currently empty."
+                  Your wishlist is empty.
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">

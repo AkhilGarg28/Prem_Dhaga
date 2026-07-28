@@ -157,6 +157,7 @@ export const login = async (req: Request, res: Response) => {
         profilePhoto: user.profilePhoto,
         language: user.language,
         notificationsEnabled: user.notificationsEnabled,
+        sevaPoints: user.sevaPoints || 0,
       },
     });
   } catch (error: any) {

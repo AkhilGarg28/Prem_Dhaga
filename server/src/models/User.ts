@@ -50,6 +50,7 @@ const userSchema = new Schema(
     preferredPaymentMethod: { type: String, default: 'Razorpay' },
     language: { type: String, default: 'English' },
     notificationsEnabled: { type: Boolean, default: true },
+    sevaPoints: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

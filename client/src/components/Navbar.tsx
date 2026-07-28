@@ -254,13 +254,13 @@ export default function Navbar() {
                             <div className="min-w-0 flex-1">
                               <p className="font-display text-lg text-ivory truncate">Radhe Radhe, {displayName}</p>
                               <p className="font-utility text-[9px] uppercase tracking-[0.22em] text-royal-gold/90 mt-0.5">
-                                {1080 + cartCount * 8} seva loyalty points
+                                {(user as any)?.sevaPoints || 0} seva loyalty points
                               </p>
                             </div>
                           </div>
                           <div className="mt-3 rounded-xl border border-royal-gold/10 bg-temple-black/40 p-2.5 flex items-center justify-between">
                             <span className="font-utility text-[8px] uppercase tracking-[0.2em] text-cream/40">Recent Order</span>
-                            <span className="font-body text-[11px] text-royal-gold font-medium">PD-108 • Preparing</span>
+                            <span className="font-body text-[11px] text-warm-beige/50 font-medium italic">No recent orders</span>
                           </div>
                         </div>
                       )}
@@ -296,7 +296,7 @@ export default function Navbar() {
                           {[
                             ['My Profile', '/account'],
                             ['My Orders', '/account'],
-                            ['Track Orders', '/order/PD-108'],
+                            ['Track Orders', '/account'],
                             ['Spiritual Wishlist', '/account'],
                             ['Saved Addresses', '/account'],
                             ['Payment Methods', '/account'],
