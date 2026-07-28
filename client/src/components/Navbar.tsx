@@ -215,41 +215,65 @@ export default function Navbar() {
                   />
 
                   <div
-                    className="luxury-popover fixed inset-y-0 right-0 z-[9999] w-full max-w-full sm:max-w-[420px] h-full h-[100dvh] flex flex-col bg-[#100d09] border-l border-royal-gold/25 text-cream shadow-[0_32px_90px_rgba(0,0,0,.85)] overflow-hidden md:absolute md:inset-auto md:right-0 md:top-[calc(100%+14px)] md:w-[390px] md:h-auto md:max-h-[85vh] md:rounded-[2rem] md:border md:shadow-2xl animate-fade-in"
+                    className="luxury-popover fixed inset-y-0 right-0 z-[9999] w-full max-w-full sm:max-w-[420px] h-full h-[100dvh] flex flex-col bg-[#100d09]/98 border-l border-royal-gold/25 text-cream shadow-[0_32px_90px_rgba(0,0,0,.85)] overflow-hidden backdrop-blur-2xl md:absolute md:inset-auto md:right-0 md:top-[calc(100%+12px)] md:w-[390px] md:h-auto md:max-h-[calc(100vh-100px)] md:rounded-[2rem] md:border md:shadow-2xl animate-fade-in"
                   >
                     <div className="absolute inset-0 temple-grain opacity-20 pointer-events-none" />
 
-                    {/* MOBILE DRAWER FIXED HEADER */}
+                    {/* FIXED HEADER SECTION (MOBILE CLOSE BAR + USER PROFILE SUMMARY) */}
                     <div
-                      className="flex items-center justify-between border-b border-royal-gold/15 bg-royal-gold/[0.04] p-5 shrink-0 z-10 md:hidden"
-                      style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}
+                      className="shrink-0 z-10 border-b border-royal-gold/15 bg-gradient-to-b from-royal-gold/[0.08] via-[#14100b] to-[#100d09] p-5 space-y-3.5"
+                      style={{ paddingTop: 'max(1.25rem, env(safe-area-inset-top))' }}
                     >
-                      <span className="font-display text-lg tracking-[0.15em] text-ivory">PREM DHAGA ACCOUNT</span>
-                      <button
-                        type="button"
-                        onClick={closeOverlays}
-                        className="w-10 h-10 rounded-full border border-royal-gold/20 flex items-center justify-center text-warm-beige/60 hover:text-royal-gold transition-colors shrink-0 active:scale-95"
-                        aria-label="Close account menu"
-                      >
-                        <Icons.Close size={20} />
-                      </button>
+                      {/* MOBILE CLOSE BAR */}
+                      <div className="flex items-center justify-between md:hidden">
+                        <span className="font-display text-lg tracking-[0.15em] text-ivory">PREM DHAGA ACCOUNT</span>
+                        <button
+                          type="button"
+                          onClick={closeOverlays}
+                          className="w-9 h-9 rounded-full border border-royal-gold/20 flex items-center justify-center text-warm-beige/60 hover:text-royal-gold transition-colors shrink-0 active:scale-95"
+                          aria-label="Close account menu"
+                        >
+                          <Icons.Close size={18} />
+                        </button>
+                      </div>
+
+                      {/* PROFILE SUMMARY BADGE */}
+                      {!isLoggedIn ? (
+                        <div className="rounded-[1.2rem] border border-royal-gold/15 bg-royal-gold/[0.04] p-4">
+                          <p className="font-display text-xl text-ivory">Welcome to Prem Dhaga</p>
+                          <p className="mt-1 font-body text-xs leading-5 text-cream/55">
+                            Sign in with your Email or Phone to access saved addresses, wishlist, order tracking and rewards.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="rounded-[1.2rem] border border-royal-gold/20 bg-gradient-to-br from-royal-gold/15 via-white/[0.03] to-peacock-blue/10 p-4 shadow-inner">
+                          <div className="flex items-center gap-3.5">
+                            <div className="grid h-12 w-12 place-items-center rounded-full border-2 border-royal-gold/40 bg-royal-gold/15 font-display text-xl text-royal-gold shadow-md shrink-0">
+                              {initials || 'PD'}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-display text-lg text-ivory truncate">Radhe Radhe, {displayName}</p>
+                              <p className="font-utility text-[9px] uppercase tracking-[0.22em] text-royal-gold/90 mt-0.5">
+                                {1080 + cartCount * 8} seva loyalty points
+                              </p>
+                            </div>
+                          </div>
+                          <div className="mt-3 rounded-xl border border-royal-gold/10 bg-temple-black/40 p-2.5 flex items-center justify-between">
+                            <span className="font-utility text-[8px] uppercase tracking-[0.2em] text-cream/40">Recent Order</span>
+                            <span className="font-body text-[11px] text-royal-gold font-medium">PD-108 • Preparing</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
-                    {/* SCROLLABLE MENU CONTAINER */}
+                    {/* SCROLLABLE MENU SECTION (INTERNAL SCROLL ONLY) */}
                     <div
-                      className="relative flex-1 overflow-y-auto overflow-x-hidden p-5 space-y-4 overscroll-contain touch-pan-y md:p-0 md:overflow-y-auto"
-                      style={{ paddingBottom: 'max(4rem, env(safe-area-inset-bottom))' }}
+                      className="relative flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-2.5 overscroll-contain touch-pan-y md:max-h-[360px]"
+                      style={{ paddingBottom: 'max(3.5rem, env(safe-area-inset-bottom))' }}
                     >
                       {!isLoggedIn ? (
                         <>
-                          <div className="rounded-[1.4rem] border border-royal-gold/15 bg-royal-gold/[0.04] p-5">
-                            <p className="font-display text-2xl text-ivory">Welcome to Prem Dhaga</p>
-                            <p className="mt-2 font-body text-xs leading-5 text-cream/55">
-                              Sign in with your Email or Phone to access saved addresses, wishlist, order tracking and rewards.
-                            </p>
-                          </div>
-
-                          <div className="grid gap-3">
+                          <div className="grid gap-2.5">
                             <button type="button" onClick={() => openAuth('login')} className="mobile-touch-card">
                               <span>Sign In with Credentials</span>
                               <Icons.ArrowRight size={16} />
@@ -268,54 +292,34 @@ export default function Navbar() {
                           </div>
                         </>
                       ) : (
-                        <>
-                          <div className="rounded-[1.4rem] border border-royal-gold/20 bg-gradient-to-br from-royal-gold/15 via-white/[0.03] to-peacock-blue/10 p-5 shadow-inner">
-                            <div className="flex items-center gap-4">
-                              <div className="grid h-14 w-14 place-items-center rounded-full border-2 border-royal-gold/40 bg-royal-gold/15 font-display text-2xl text-royal-gold shadow-md shrink-0">
-                                {initials || 'PD'}
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="font-display text-xl sm:text-2xl text-ivory truncate">Radhe Radhe, {displayName}</p>
-                                <p className="font-utility text-[9px] uppercase tracking-[0.24em] text-royal-gold/90 mt-0.5">
-                                  {1080 + cartCount * 8} seva loyalty points
-                                </p>
-                              </div>
-                            </div>
-                            <div className="mt-4 rounded-2xl border border-royal-gold/10 bg-temple-black/40 p-3">
-                              <p className="font-utility text-[8px] uppercase tracking-[0.25em] text-cream/40">Recent order</p>
-                              <p className="mt-1 font-body text-xs text-cream/70">PD-108 / Preparing in Vrindavan Atelier</p>
-                            </div>
-                          </div>
-
-                          <div className="grid gap-2.5 pt-1">
-                            {[
-                              ['My Profile', '/account'],
-                              ['My Orders', '/account'],
-                              ['Track Orders', '/order/PD-108'],
-                              ['Wishlist', '/account'],
-                              ['Saved Addresses', '/account'],
-                              ['Payment Methods', '/account'],
-                              ['Notifications', '/account'],
-                              ['Support Desk', '/account'],
-                            ].map(([label, href]) => (
-                              <Link key={label} href={href} onClick={closeOverlays} className="mobile-touch-card">
-                                <span>{label}</span>
-                                <Icons.ArrowRight size={16} />
-                              </Link>
-                            ))}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                logout();
-                                closeOverlays();
-                              }}
-                              className="mobile-touch-card mobile-touch-card-danger"
-                            >
-                              <span>Logout</span>
+                        <div className="grid gap-2.5">
+                          {[
+                            ['My Profile', '/account'],
+                            ['My Orders', '/account'],
+                            ['Track Orders', '/order/PD-108'],
+                            ['Spiritual Wishlist', '/account'],
+                            ['Saved Addresses', '/account'],
+                            ['Payment Methods', '/account'],
+                            ['Notifications', '/account'],
+                            ['Support Desk', '/account'],
+                          ].map(([label, href]) => (
+                            <Link key={label} href={href} onClick={closeOverlays} className="mobile-touch-card">
+                              <span>{label}</span>
                               <Icons.ArrowRight size={16} />
-                            </button>
-                          </div>
-                        </>
+                            </Link>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              logout();
+                              closeOverlays();
+                            }}
+                            className="mobile-touch-card mobile-touch-card-danger"
+                          >
+                            <span>Logout</span>
+                            <Icons.ArrowRight size={16} />
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>

@@ -333,6 +333,29 @@ input:focus-visible {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
 }
 
+/* Custom scrollbars inside luxury popovers & drawers */
+.luxury-popover ::-webkit-scrollbar,
+.profile-glass-card ::-webkit-scrollbar {
+  width: 5px;
+}
+
+.luxury-popover ::-webkit-scrollbar-track,
+.profile-glass-card ::-webkit-scrollbar-track {
+  background: rgba(16, 13, 9, 0.4);
+  border-radius: 10px;
+}
+
+.luxury-popover ::-webkit-scrollbar-thumb,
+.profile-glass-card ::-webkit-scrollbar-thumb {
+  background: rgba(201, 168, 76, 0.35);
+  border-radius: 10px;
+}
+
+.luxury-popover ::-webkit-scrollbar-thumb:hover,
+.profile-glass-card ::-webkit-scrollbar-thumb:hover {
+  background: rgba(201, 168, 76, 0.7);
+}
+
 .account-action,
 .account-mini-link,
 .search-suggestion,
