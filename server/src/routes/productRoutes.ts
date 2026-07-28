@@ -2,6 +2,8 @@ import { Router } from 'express';
 import {
   getCollections,
   createCollection,
+  updateCollection,
+  deleteCollection,
   getProducts,
   getProductBySlug,
   createProduct,
@@ -21,6 +23,18 @@ router.post(
   authorizeRoles('admin', 'manager', 'product_manager', 'super_admin'),
   upload.single('image'),
   createCollection
+);
+router.put(
+  '/collections/:id',
+  authenticateJWT,
+  authorizeRoles('admin', 'manager', 'product_manager', 'super_admin'),
+  updateCollection
+);
+router.delete(
+  '/collections/:id',
+  authenticateJWT,
+  authorizeRoles('admin', 'super_admin'),
+  deleteCollection
 );
 
 // Products

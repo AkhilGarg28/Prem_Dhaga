@@ -11,6 +11,8 @@ const couponSchema = new Schema(
     usageLimit: { type: Number }, // total usage allowed
     usageCount: { type: Number, default: 0 },
     isActive: { type: Boolean, default: true },
+    isFirstOrderOnly: { type: Boolean, default: false },
+    isAutoApply: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

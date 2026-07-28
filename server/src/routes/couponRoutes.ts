@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getAllCoupons,
   createCoupon,
+  updateCoupon,
   validateCoupon,
   toggleCouponState,
   deleteCoupon,
@@ -16,6 +17,7 @@ router.post('/validate', validateCoupon);
 // Admin controls
 router.get('/', authenticateJWT, authorizeRoles('admin', 'manager', 'super_admin'), getAllCoupons);
 router.post('/', authenticateJWT, authorizeRoles('admin', 'manager', 'super_admin'), createCoupon);
+router.put('/:id', authenticateJWT, authorizeRoles('admin', 'manager', 'super_admin'), updateCoupon);
 router.put('/:id/status', authenticateJWT, authorizeRoles('admin', 'manager', 'super_admin'), toggleCouponState);
 router.delete('/:id', authenticateJWT, authorizeRoles('admin', 'manager', 'super_admin'), deleteCoupon);
 

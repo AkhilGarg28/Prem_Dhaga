@@ -24,17 +24,20 @@ export default function AdminCouponsPage() {
   const [coupons, setCoupons] = useState<CouponItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState<CouponItem | null>(null);
+
   const [code, setCode] = useState('');
   const [discountType, setDiscountType] = useState<'flat' | 'percentage'>('percentage');
   const [discountValue, setDiscountValue] = useState('10');
   const [minOrderAmount, setMinOrderAmount] = useState('1000');
-  const [maxDiscountAmount, setMaxDiscountAmount] = useState('500');
+  const [maxDiscountAmount, setMaxDiscountAmount] = useState('');
   const [usageLimit, setUsageLimit] = useState('200');
   const [isFirstOrderOnly, setIsFirstOrderOnly] = useState(false);
   const [isAutoApply, setIsAutoApply] = useState(false);
-  const [expiryDate, setExpiryDate] = useState('2026-09-30');
+  const [expiryDate, setExpiryDate] = useState('2026-12-31');
   const [submitLoading, setSubmitLoading] = useState(false);
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -60,37 +63,89 @@ export default function AdminCouponsPage() {
     if (token) fetchCoupons();
   }, [token]);
 
-  const handleCreateCoupon = async (e: React.FormEvent) => {
+  const handleOpenCreateModal = () => {
+    setEditingCoupon(null);
+    setCode('');
+    setDiscountType('percentage');
+    setDiscountValue('10');
+    setMinOrderAmount('1000');
+    setMaxDiscountAmount('500');
+    setUsageLimit('200');
+    setIsFirstOrderOnly(false);
+    setIsAutoApply(false);
+    setExpiryDate('2026-12-31');
+    setError('');
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (c: CouponItem) => {
+    setEditingCoupon(c);
+    setCode(c.code);
+    setDiscountType(c.discountType);
+    setDiscountValue(c.discountValue.toString());
+    setMinOrderAmount((c.minOrderAmount || 0).toString());
+    setMaxDiscountAmount(c.maxDiscountAmount ? c.maxDiscountAmount.toString() : '');
+    setUsageLimit(c.usageLimit ? c.usageLimit.toString() : '');
+    setIsFirstOrderOnly(Boolean(c.isFirstOrderOnly));
+    setIsAutoApply(Boolean(c.isAutoApply));
+    setExpiryDate(c.expiryDate ? c.expiryDate.substring(0, 10) : '');
+    setError('');
+    setIsModalOpen(true);
+  };
+
+  const handleSaveCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccessMsg('');
     setSubmitLoading(true);
 
     try {
-      const res = await fetch(`${apiUrl}/coupons`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          code: code.toUpperCase().trim(),
-          discountType,
-          discountValue: Number(discountValue),
-          minOrderAmount: Number(minOrderAmount),
-          maxDiscountAmount: maxDiscountAmount ? Number(maxDiscountAmount) : undefined,
-          usageLimit: usageLimit ? Number(usageLimit) : undefined,
-          expiryDate: expiryDate ? expiryDate : undefined,
-        }),
-      });
+      const payload = {
+        code: code.toUpperCase().trim(),
+        discountType,
+        discountValue: Number(discountValue),
+        minOrderAmount: Number(minOrderAmount) || 0,
+        maxDiscountAmount: maxDiscountAmount ? Number(maxDiscountAmount) : undefined,
+        usageLimit: usageLimit ? Number(usageLimit) : undefined,
+        expiryDate: expiryDate ? expiryDate : undefined,
+        isFirstOrderOnly,
+        isAutoApply,
+      };
+
+      let res;
+      if (editingCoupon) {
+        res = await fetch(`${apiUrl}/coupons/${editingCoupon._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+      } else {
+        res = await fetch(`${apiUrl}/coupons`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify(payload),
+        });
+      }
 
       const data = await res.json();
 
       if (res.ok) {
-        setCoupons([data, ...coupons]);
+        if (editingCoupon) {
+          setCoupons(coupons.map((c) => (c._id === editingCoupon._id ? data : c)));
+          setSuccessMsg(`Coupon ${data.code} updated successfully!`);
+        } else {
+          setCoupons([data, ...coupons]);
+          setSuccessMsg(`Coupon ${data.code} created and published!`);
+        }
         setIsModalOpen(false);
-        setCode('');
       } else {
-        setError(data.error || 'Failed to create coupon');
+        setError(data.error || 'Failed to save coupon');
       }
     } catch (err: any) {
       setError(err.message || 'Error connecting to server');
@@ -118,6 +173,23 @@ export default function AdminCouponsPage() {
     }
   };
 
+  const handleDeleteCoupon = async (id: string, codeStr: string) => {
+    if (!confirm(`Are you sure you want to delete coupon "${codeStr}"?`)) return;
+    try {
+      const res = await fetch(`${apiUrl}/coupons/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        setCoupons(coupons.filter((c) => c._id !== id));
+        setSuccessMsg(`Coupon ${codeStr} deleted.`);
+      }
+    } catch (err) {
+      console.error('Error deleting coupon:', err);
+    }
+  };
+
   return (
     <AdminRBACGuard allowedRoles={['super_admin', 'admin', 'manager', 'marketing_manager']}>
       <div className="space-y-6">
@@ -129,12 +201,20 @@ export default function AdminCouponsPage() {
           </div>
 
           <button
-            onClick={() => setIsModalOpen(true)}
+            onClick={handleOpenCreateModal}
             className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-medium text-xs font-mono rounded-lg transition-colors shadow-lg shadow-amber-500/10 flex items-center gap-1.5"
           >
             <span>+ Build New Coupon</span>
           </button>
         </div>
+
+        {/* Toast Notices */}
+        {successMsg && (
+          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono flex justify-between items-center">
+            <span>✓ {successMsg}</span>
+            <button onClick={() => setSuccessMsg('')} className="text-emerald-400">✕</button>
+          </div>
+        )}
 
         {/* Coupons Table */}
         <div className="bg-[#12141D] border border-slate-800 rounded-xl overflow-hidden shadow-xl font-mono text-xs">
@@ -153,57 +233,90 @@ export default function AdminCouponsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800/60 text-slate-200">
-                {coupons.map((c) => (
-                  <tr key={c._id} className="hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3.5 px-4 font-bold text-amber-300">
-                      {c.code}
-                      {c.isFirstOrderOnly && <span className="block text-[10px] text-cyan-400 font-normal mt-0.5">1st Order Only</span>}
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-400 capitalize">{c.discountType}</td>
-                    <td className="py-3.5 px-4 text-right font-semibold text-slate-100">
-                      {c.discountType === 'percentage' ? `${c.discountValue}% Off` : `₹${c.discountValue} Flat`}
-                    </td>
-                    <td className="py-3.5 px-4 text-right text-slate-300">₹{c.minOrderAmount}</td>
-                    <td className="py-3.5 px-4 text-center text-slate-300">
-                      {c.usageCount} / {c.usageLimit || '∞'}
-                    </td>
-                    <td className="py-3.5 px-4 text-center text-slate-400">{c.expiryDate || 'Never'}</td>
-                    <td className="py-3.5 px-4 text-center">
-                      <span
-                        className={`inline-block px-2.5 py-0.5 rounded text-[10px] ${
-                          c.isActive ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700'
-                        }`}
-                      >
-                        {c.isActive ? 'Active' : 'Disabled'}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <button
-                        onClick={() => handleToggleActive(c._id, c.isActive)}
-                        className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition-colors"
-                      >
-                        {c.isActive ? 'Disable' : 'Enable'}
-                      </button>
-                    </td>
+                {loading ? (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-slate-500">Loading coupons...</td>
                   </tr>
-                ))}
+                ) : coupons.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-8 text-center text-slate-500">No active coupons found. Click "+ Build New Coupon" to create one.</td>
+                  </tr>
+                ) : (
+                  coupons.map((c) => (
+                    <tr key={c._id} className="hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3.5 px-4 font-bold text-amber-300">
+                        {c.code}
+                        {c.isFirstOrderOnly && <span className="block text-[10px] text-cyan-400 font-normal mt-0.5">1st Order Only</span>}
+                        {c.isAutoApply && <span className="block text-[10px] text-emerald-400 font-normal">Auto-Apply</span>}
+                      </td>
+                      <td className="py-3.5 px-4 text-slate-400 capitalize">{c.discountType}</td>
+                      <td className="py-3.5 px-4 text-right font-semibold text-slate-100">
+                        {c.discountType === 'percentage' ? `${c.discountValue}% Off` : `₹${c.discountValue} Flat`}
+                      </td>
+                      <td className="py-3.5 px-4 text-right text-slate-300">₹{c.minOrderAmount}</td>
+                      <td className="py-3.5 px-4 text-center text-slate-300">
+                        {c.usageCount} / {c.usageLimit || '∞'}
+                      </td>
+                      <td className="py-3.5 px-4 text-center text-slate-400">
+                        {c.expiryDate ? new Date(c.expiryDate).toLocaleDateString() : 'Never'}
+                      </td>
+                      <td className="py-3.5 px-4 text-center">
+                        <span
+                          className={`inline-block px-2.5 py-0.5 rounded text-[10px] ${
+                            c.isActive ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700'
+                          }`}
+                        >
+                          {c.isActive ? 'Active' : 'Disabled'}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right space-x-2">
+                        <button
+                          onClick={() => handleOpenEditModal(c)}
+                          className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded text-xs transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleToggleActive(c._id, c.isActive)}
+                          className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded border border-slate-700 transition-colors"
+                        >
+                          {c.isActive ? 'Disable' : 'Enable'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCoupon(c._id, c.code)}
+                          className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded text-xs transition-colors"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
         </div>
 
-        {/* Create Coupon Modal */}
+        {/* Create / Edit Coupon Modal */}
         {isModalOpen && (
           <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-[#12141D] border border-slate-800 w-full max-w-lg rounded-2xl shadow-2xl p-6 space-y-4 animate-scale-in font-mono text-xs">
               <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                <h3 className="text-base font-semibold font-serif text-slate-100">Build Promotional Coupon</h3>
+                <h3 className="text-base font-semibold font-serif text-slate-100">
+                  {editingCoupon ? `Edit Coupon: ${editingCoupon.code}` : 'Build Promotional Coupon'}
+                </h3>
                 <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-100">
                   ✕
                 </button>
               </div>
 
-              <form onSubmit={handleCreateCoupon} className="space-y-4">
+              {error && (
+                <div className="p-3 rounded bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-mono">
+                  ⚠️ {error}
+                </div>
+              )}
+
+              <form onSubmit={handleSaveCoupon} className="space-y-4">
                 <div>
                   <label className="block text-[10px] text-slate-400 uppercase mb-1">Coupon Code</label>
                   <input
@@ -264,6 +377,29 @@ export default function AdminCouponsPage() {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] text-slate-400 uppercase mb-1">Max Discount Cap (₹)</label>
+                    <input
+                      type="number"
+                      value={maxDiscountAmount}
+                      onChange={(e) => setMaxDiscountAmount(e.target.value)}
+                      placeholder="Optional"
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-slate-400 uppercase mb-1">Expiry Date</label>
+                    <input
+                      type="date"
+                      value={expiryDate}
+                      onChange={(e) => setExpiryDate(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-lg text-slate-100 cursor-pointer"
+                    />
+                  </div>
+                </div>
+
                 <div className="flex items-center gap-6 pt-2">
                   <label className="flex items-center gap-2 cursor-pointer text-slate-300">
                     <input
@@ -289,8 +425,8 @@ export default function AdminCouponsPage() {
                   <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 bg-slate-800 text-slate-300 rounded-lg">
                     Cancel
                   </button>
-                  <button type="submit" className="px-5 py-2 bg-amber-500 text-slate-950 font-semibold rounded-lg">
-                    Publish Coupon Code
+                  <button type="submit" disabled={submitLoading} className="px-5 py-2 bg-amber-500 text-slate-950 font-semibold rounded-lg disabled:opacity-50">
+                    {submitLoading ? 'Saving...' : editingCoupon ? 'Save Changes' : 'Publish Coupon Code'}
                   </button>
                 </div>
               </form>

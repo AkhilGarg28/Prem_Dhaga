@@ -6,8 +6,23 @@ import { uploadImageToCloudinary } from '../config/services';
 // --- COLLECTIONS ---
 export const getCollections = async (req: Request, res: Response) => {
   try {
-    const collections = await Collection.find({ isActive: true });
-    return res.status(200).json(collections);
+    const { all } = req.query;
+    const filter = all === 'true' ? {} : { isActive: true };
+    const collections = await Collection.find(filter).sort({ createdAt: -1 });
+
+    // Attach product count to each collection
+    const result = await Promise.all(
+      collections.map(async (col) => {
+        const productCount = await Product.countDocuments({ collectionId: col._id });
+        return {
+          ...col.toObject(),
+          itemCount: productCount,
+          productCount,
+        };
+      })
+    );
+
+    return res.status(200).json(result);
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }
@@ -15,26 +30,65 @@ export const getCollections = async (req: Request, res: Response) => {
 
 export const createCollection = async (req: Request, res: Response) => {
   try {
-    const { title, description } = req.body;
+    const { title, description, coverImage, bannerImage, isFeatured, isActive } = req.body;
     if (!title) return res.status(400).json({ error: 'Title is required' });
 
     const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
     const existing = await Collection.findOne({ slug });
     if (existing) return res.status(400).json({ error: 'Collection with this title already exists' });
 
-    let coverImage = '';
+    let finalCover = coverImage || '';
     if (req.file) {
-      coverImage = await uploadImageToCloudinary(req.file.buffer, 'collections');
+      finalCover = await uploadImageToCloudinary(req.file.buffer, 'collections');
     }
 
     const collection = new Collection({
       title,
       slug,
       description,
-      coverImage,
+      coverImage: finalCover,
+      bannerImage: bannerImage || finalCover,
+      isFeatured: isFeatured === 'true' || isFeatured === true,
+      isActive: isActive !== undefined ? Boolean(isActive) : true,
     });
     await collection.save();
     return res.status(201).json(collection);
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const updateCollection = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { title, description, coverImage, bannerImage, isFeatured, isActive } = req.body;
+
+    const collection = await Collection.findById(id);
+    if (!collection) return res.status(404).json({ error: 'Collection not found' });
+
+    if (title && title !== collection.title) {
+      collection.title = title;
+      collection.slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
+    }
+    if (description !== undefined) collection.description = description;
+    if (coverImage !== undefined) collection.coverImage = coverImage;
+    if (bannerImage !== undefined) collection.bannerImage = bannerImage;
+    if (isFeatured !== undefined) collection.isFeatured = Boolean(isFeatured);
+    if (isActive !== undefined) collection.isActive = Boolean(isActive);
+
+    await collection.save();
+    return res.status(200).json(collection);
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const deleteCollection = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Collection.findByIdAndDelete(id);
+    if (!deleted) return res.status(404).json({ error: 'Collection not found' });
+    return res.status(200).json({ message: 'Collection deleted successfully' });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }

@@ -14,27 +14,82 @@ export const getAllCoupons = async (req: Request, res: Response) => {
 // Create a new coupon (Admin)
 export const createCoupon = async (req: Request, res: Response) => {
   try {
-    const { code, discountType, discountValue, minOrderAmount, maxDiscountAmount, expiryDate, usageLimit } = req.body;
+    const {
+      code,
+      discountType,
+      discountValue,
+      minOrderAmount,
+      maxDiscountAmount,
+      expiryDate,
+      usageLimit,
+      isFirstOrderOnly,
+      isAutoApply,
+    } = req.body;
 
     if (!code || !discountType || !discountValue) {
       return res.status(400).json({ error: 'Code, discount type, and value are required.' });
     }
 
-    const existing = await Coupon.findOne({ code: code.toUpperCase() });
+    const existing = await Coupon.findOne({ code: code.toUpperCase().trim() });
     if (existing) return res.status(400).json({ error: 'Coupon code already exists.' });
 
     const coupon = new Coupon({
-      code: code.toUpperCase(),
+      code: code.toUpperCase().trim(),
       discountType,
-      discountValue,
-      minOrderAmount,
-      maxDiscountAmount,
+      discountValue: Number(discountValue),
+      minOrderAmount: minOrderAmount ? Number(minOrderAmount) : 0,
+      maxDiscountAmount: maxDiscountAmount ? Number(maxDiscountAmount) : undefined,
       expiryDate: expiryDate ? new Date(expiryDate) : undefined,
-      usageLimit,
+      usageLimit: usageLimit ? Number(usageLimit) : undefined,
+      isFirstOrderOnly: Boolean(isFirstOrderOnly),
+      isAutoApply: Boolean(isAutoApply),
     });
 
     await coupon.save();
     return res.status(201).json(coupon);
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// Update an existing coupon (Admin)
+export const updateCoupon = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const {
+      code,
+      discountType,
+      discountValue,
+      minOrderAmount,
+      maxDiscountAmount,
+      expiryDate,
+      usageLimit,
+      isFirstOrderOnly,
+      isAutoApply,
+      isActive,
+    } = req.body;
+
+    const coupon = await Coupon.findById(id);
+    if (!coupon) return res.status(404).json({ error: 'Coupon not found.' });
+
+    if (code && code.toUpperCase().trim() !== coupon.code) {
+      const existing = await Coupon.findOne({ code: code.toUpperCase().trim() });
+      if (existing) return res.status(400).json({ error: 'Another coupon with this code already exists.' });
+      coupon.code = code.toUpperCase().trim();
+    }
+
+    if (discountType) coupon.discountType = discountType;
+    if (discountValue !== undefined) coupon.discountValue = Number(discountValue);
+    if (minOrderAmount !== undefined) coupon.minOrderAmount = Number(minOrderAmount);
+    if (maxDiscountAmount !== undefined) coupon.maxDiscountAmount = Number(maxDiscountAmount);
+    if (expiryDate !== undefined) coupon.expiryDate = expiryDate ? new Date(expiryDate) : undefined;
+    if (usageLimit !== undefined) coupon.usageLimit = usageLimit ? Number(usageLimit) : undefined;
+    if (isFirstOrderOnly !== undefined) coupon.isFirstOrderOnly = Boolean(isFirstOrderOnly);
+    if (isAutoApply !== undefined) coupon.isAutoApply = Boolean(isAutoApply);
+    if (isActive !== undefined) coupon.isActive = Boolean(isActive);
+
+    await coupon.save();
+    return res.status(200).json(coupon);
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }
@@ -46,7 +101,7 @@ export const validateCoupon = async (req: Request, res: Response) => {
     const { code, cartTotal } = req.body;
     if (!code) return res.status(400).json({ error: 'Coupon code is required.' });
 
-    const coupon = await Coupon.findOne({ code: code.toUpperCase(), isActive: true });
+    const coupon = await Coupon.findOne({ code: code.toUpperCase().trim(), isActive: true });
     if (!coupon) return res.status(404).json({ error: 'Coupon code is invalid or inactive.' });
 
     // Check expiry

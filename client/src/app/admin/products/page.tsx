@@ -81,96 +81,49 @@ export default function AdminProductsPage() {
   const [images, setImages] = useState<string[]>([]);
   const [aiGenerating, setAiGenerating] = useState(false);
 
+  const [collections, setCollections] = useState<{ _id: string; title: string }[]>([]);
+  const [collectionId, setCollectionId] = useState('');
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
   useEffect(() => {
     fetchProducts();
+    fetchCollections();
   }, []);
+
+  const fetchCollections = async () => {
+    try {
+      const res = await fetch(`${apiUrl}/products/collections?all=true`);
+      if (res.ok) {
+        const data = await res.json();
+        setCollections(data);
+        if (data.length > 0) setCollectionId(data[0]._id);
+      }
+    } catch (err) {
+      console.warn('Error fetching collections for dropdown:', err);
+    }
+  };
 
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/products`);
+      const response = await fetch(`${apiUrl}/products?status=all`);
       const data = await response.json();
       if (Array.isArray(data)) {
         setProducts(data);
       } else {
-        setProducts(getMockProducts());
+        setProducts([]);
       }
     } catch (err) {
-      setProducts(getMockProducts());
+      console.error('Error fetching products:', err);
+      setProducts([]);
     } finally {
       setLoading(false);
     }
   };
-
-  const getMockProducts = (): Product[] => [
-    {
-      _id: 'prod_1',
-      name: 'Lotus Shringaar Poshak',
-      slug: 'lotus-shringaar-poshak',
-      sku: 'PD-LTS-001',
-      barcode: '8901234567891',
-      description: 'Handcrafted in Vrindavan with delicate lotus embroidery and fine golden borders.',
-      basePrice: 1200,
-      discountPrice: 1050,
-      gstRate: 12,
-      images: ['https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=600&auto=format&fit=crop'],
-      collectionId: 'col_1',
-      collectionName: 'Summer Silk',
-      stock: 15,
-      weight: 220,
-      material: 'Organic Silk',
-      fabric: 'Mulberry Silk',
-      festival: 'Janmashtami',
-      occasion: 'Shringar Darshan',
-      tags: ['silk', 'lotus', 'vrindavan', 'poshak'],
-      sizes: [
-        { size: 0, price: 1200 },
-        { size: 1, price: 1350 },
-        { size: 2, price: 1500 },
-        { size: 3, price: 1650 },
-      ],
-      swatches: [
-        { name: 'Vrindavan Green', hex: '#3B6B3B' },
-        { name: 'Lotus Pink', hex: '#D4788A' },
-      ],
-      isFeatured: true,
-      isTrending: true,
-      isBestSeller: true,
-      isRecommended: true,
-      status: 'active',
-      seo: {
-        metaTitle: 'Lotus Shringaar Poshak | Pure Silk Attire for Laddu Gopal',
-        metaDescription: 'Buy handcrafted Lotus Shringaar Poshak for Laddu Gopal made with pure silk in Vrindavan.',
-      },
-    },
-    {
-      _id: 'prod_2',
-      name: 'Morpankh Velvet Poshak',
-      slug: 'morpankh-velvet-poshak',
-      sku: 'PD-MRP-002',
-      barcode: '8901234567892',
-      description: 'Deep royal blue velvet poshak with detailed hand-embroidered peacock feathers.',
-      basePrice: 2800,
-      gstRate: 12,
-      images: ['https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?q=80&w=600&auto=format&fit=crop'],
-      collectionId: 'col_2',
-      collectionName: 'Rajbhog Royal',
-      stock: 3, // Low Stock Warning!
-      weight: 350,
-      material: 'Royal Velvet',
-      fabric: 'Micro Velvet',
-      festival: 'Radhashtami',
-      occasion: 'Rajbhog Darshan',
-      tags: ['velvet', 'peacock', 'zardozi'],
-      sizes: [{ size: 2, price: 2800 }],
-      swatches: [{ name: 'Peacock Blue', hex: '#1B5E6E' }],
-      isFeatured: true,
-      isTrending: false,
-      isBestSeller: true,
-      isRecommended: false,
-      status: 'active',
-    },
-  ];
 
   const handleOpenCreateModal = () => {
     setEditingProduct(null);
@@ -190,7 +143,8 @@ export default function AdminProductsPage() {
     setStatus('active');
     setIsFeatured(false);
     setIsTrending(false);
-    setImages(['https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=600&auto=format&fit=crop']);
+    setImages([]);
+    setErrorMsg('');
     setIsModalOpen(true);
   };
 
@@ -212,8 +166,52 @@ export default function AdminProductsPage() {
     setStatus(prod.status);
     setIsFeatured(prod.isFeatured);
     setIsTrending(prod.isTrending);
-    setImages(prod.images.length ? prod.images : ['https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=600&auto=format&fit=crop']);
+    setCollectionId(typeof prod.collectionId === 'object' ? (prod.collectionId as any)._id : prod.collectionId || (collections[0]?._id || ''));
+    setImages(prod.images || []);
+    setErrorMsg('');
     setIsModalOpen(true);
+  };
+
+  const handleMultipleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setUploadingImages(true);
+    setErrorMsg('');
+
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i]);
+      }
+
+      const res = await fetch(`${apiUrl}/upload`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (res.ok && data.urls) {
+        setImages((prev) => [...prev, ...data.urls]);
+      } else {
+        setErrorMsg(data.error || 'Failed to upload images');
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Image upload failed');
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setImages(images.filter((_, i) => i !== index));
+  };
+
+  const handleSetPrimaryImage = (index: number) => {
+    if (index === 0) return;
+    const selected = images[index];
+    const rest = images.filter((_, i) => i !== index);
+    setImages([selected, ...rest]);
   };
 
   const handleGenerateAiDescription = () => {
@@ -229,7 +227,13 @@ export default function AdminProductsPage() {
 
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    const token = localStorage.getItem('prem-dhaga-auth') ? JSON.parse(localStorage.getItem('prem-dhaga-auth')!).state.token : '';
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    const token = localStorage.getItem('prem-dhaga-auth')
+      ? JSON.parse(localStorage.getItem('prem-dhaga-auth')!).state.token
+      : '';
+
     const productPayload = {
       name,
       slug: name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
@@ -245,7 +249,8 @@ export default function AdminProductsPage() {
       fabric,
       festival,
       occasion,
-      images,
+      collectionId: collectionId || (collections[0]?._id || undefined),
+      images: images.length > 0 ? images : ['https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=600'],
       status,
       isFeatured,
       isTrending,
@@ -253,61 +258,52 @@ export default function AdminProductsPage() {
     };
 
     try {
-      if (editingProduct && !editingProduct._id.startsWith('prod_')) {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/products/${editingProduct._id}`, {
+      let res;
+      if (editingProduct) {
+        res = await fetch(`${apiUrl}/products/${editingProduct._id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify(productPayload),
         });
-        const saved = await res.json();
-        setProducts(products.map((p) => (p._id === editingProduct._id ? saved : p)));
       } else {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/products`, {
+        res = await fetch(`${apiUrl}/products`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify(productPayload),
         });
-        const saved = await res.json();
-        if (res.ok && saved._id) {
-          setProducts([saved, ...products]);
-        } else {
-          // Dev local state fallback
-          const localProd: Product = {
-            _id: editingProduct ? editingProduct._id : `prod_${Date.now()}`,
-            ...productPayload,
-            collectionId: 'col_1',
-            collectionName: 'Summer Silk',
-            sizes: [0, 1, 2, 3, 4].map((sz) => ({ size: sz, price: Number(basePrice) + sz * 150 })),
-            swatches: [{ name: 'Royal Gold', hex: '#C9A84C' }],
-            isBestSeller: false,
-            isRecommended: false,
-          };
-          if (editingProduct) {
-            setProducts(products.map((p) => (p._id === editingProduct._id ? localProd : p)));
-          } else {
-            setProducts([localProd, ...products]);
-          }
-        }
+      }
+
+      const saved = await res.json();
+      if (res.ok) {
+        setSuccessMsg(editingProduct ? `Product "${saved.name}" updated!` : `Product "${saved.name}" published!`);
+        setIsModalOpen(false);
+        fetchProducts();
+      } else {
+        setErrorMsg(saved.error || 'Failed to save product');
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error connecting to backend API');
+    }
+  };
+
+  const handleDeleteProduct = async (prod: Product) => {
+    if (!confirm(`Are you sure you want to delete product "${prod.name}"?`)) return;
+    const token = localStorage.getItem('prem-dhaga-auth')
+      ? JSON.parse(localStorage.getItem('prem-dhaga-auth')!).state.token
+      : '';
+
+    try {
+      const res = await fetch(`${apiUrl}/products/${prod._id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setProducts(products.filter((p) => p._id !== prod._id));
+        setSuccessMsg(`Product "${prod.name}" deleted successfully.`);
       }
     } catch (err) {
-      // Dev local state fallback
-      const localProd: Product = {
-        _id: editingProduct ? editingProduct._id : `prod_${Date.now()}`,
-        ...productPayload,
-        collectionId: 'col_1',
-        collectionName: 'Summer Silk',
-        sizes: [0, 1, 2, 3, 4].map((sz) => ({ size: sz, price: Number(basePrice) + sz * 150 })),
-        swatches: [{ name: 'Royal Gold', hex: '#C9A84C' }],
-        isBestSeller: false,
-        isRecommended: false,
-      };
-      if (editingProduct) {
-        setProducts(products.map((p) => (p._id === editingProduct._id ? localProd : p)));
-      } else {
-        setProducts([localProd, ...products]);
-      }
+      console.error('Error deleting product:', err);
     }
-    setIsModalOpen(false);
   };
 
   const handleExportCsv = () => {
@@ -369,6 +365,14 @@ export default function AdminProductsPage() {
             </button>
           </div>
         </div>
+
+        {/* Toast Notices */}
+        {successMsg && (
+          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono flex justify-between items-center">
+            <span>✓ {successMsg}</span>
+            <button onClick={() => setSuccessMsg('')} className="text-emerald-400">✕</button>
+          </div>
+        )}
 
         {/* Search & Filter Toolbar */}
         <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between bg-[#12141D] p-3 rounded-xl border border-slate-800">
@@ -445,7 +449,7 @@ export default function AdminProductsPage() {
                       <td className="py-3 px-4">
                         <div className="flex items-center gap-3">
                           <img
-                            src={prod.images[0] || 'https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=150'}
+                            src={prod.images?.[0] || 'https://images.unsplash.com/photo-1544816155-12df9643f363?q=80&w=150'}
                             alt={prod.name}
                             className="w-9 h-9 object-cover rounded-lg border border-slate-700 bg-slate-900"
                           />
@@ -460,7 +464,9 @@ export default function AdminProductsPage() {
                         <p className="text-[10px] text-slate-500">{prod.barcode || '-'}</p>
                       </td>
                       <td className="py-3 px-4 text-slate-400">
-                        <p className="text-slate-200">{prod.collectionName || 'General'}</p>
+                        <p className="text-slate-200">
+                          {typeof prod.collectionId === 'object' ? (prod.collectionId as any)?.title : prod.collectionName || 'General'}
+                        </p>
                         <p className="text-[10px]">{prod.fabric || prod.material}</p>
                       </td>
                       <td className="py-3 px-4 text-right font-semibold text-slate-100">
@@ -498,12 +504,18 @@ export default function AdminProductsPage() {
                           {prod.status}
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right">
+                      <td className="py-3 px-4 text-right space-x-2">
                         <button
                           onClick={() => handleOpenEditModal(prod)}
                           className="px-2.5 py-1 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 rounded text-xs transition-colors"
                         >
                           Edit
+                        </button>
+                        <button
+                          onClick={() => handleDeleteProduct(prod)}
+                          className="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded text-xs transition-colors"
+                        >
+                          Delete
                         </button>
                       </td>
                     </tr>
@@ -527,6 +539,12 @@ export default function AdminProductsPage() {
                 </button>
               </div>
 
+              {errorMsg && (
+                <div className="p-3 rounded bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-mono">
+                  ⚠️ {errorMsg}
+                </div>
+              )}
+
               <form onSubmit={handleSaveProduct} className="space-y-4 text-xs font-mono">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
@@ -542,23 +560,41 @@ export default function AdminProductsPage() {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] text-slate-400 uppercase mb-1">SKU / Barcode</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <input
-                        type="text"
-                        value={sku}
-                        onChange={(e) => setSku(e.target.value)}
-                        placeholder="SKU"
-                        className="w-full px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-100 focus:outline-none focus:border-amber-500/50"
-                      />
-                      <input
-                        type="text"
-                        value={barcode}
-                        onChange={(e) => setBarcode(e.target.value)}
-                        placeholder="Barcode"
-                        className="w-full px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-100 focus:outline-none focus:border-amber-500/50"
-                      />
-                    </div>
+                    <label className="block text-[10px] text-slate-400 uppercase mb-1">Assigned Collection</label>
+                    <select
+                      value={collectionId}
+                      onChange={(e) => setCollectionId(e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-amber-300 font-bold cursor-pointer"
+                    >
+                      {collections.map((col) => (
+                        <option key={col._id} value={col._id}>
+                          {col.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[10px] text-slate-400 uppercase mb-1">SKU</label>
+                    <input
+                      type="text"
+                      value={sku}
+                      onChange={(e) => setSku(e.target.value)}
+                      placeholder="e.g. PD-MRP-002"
+                      className="w-full px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-100 focus:outline-none focus:border-amber-500/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] text-slate-400 uppercase mb-1">Barcode</label>
+                    <input
+                      type="text"
+                      value={barcode}
+                      onChange={(e) => setBarcode(e.target.value)}
+                      placeholder="e.g. 890123456789"
+                      className="w-full px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-100 focus:outline-none focus:border-amber-500/50"
+                    />
                   </div>
                 </div>
 
@@ -677,16 +713,58 @@ export default function AdminProductsPage() {
                   </div>
                 </div>
 
-                {/* Image Upload Input */}
-                <div>
-                  <label className="block text-[10px] text-slate-400 uppercase mb-1">Primary Image URL (Cloudinary)</label>
-                  <input
-                    type="text"
-                    value={images[0] || ''}
-                    onChange={(e) => setImages([e.target.value])}
-                    placeholder="https://res.cloudinary.com/..."
-                    className="w-full px-3 py-2 bg-slate-950/80 border border-slate-800 rounded-lg text-slate-100"
-                  />
+                {/* DIRECT MULTI-IMAGE FILE UPLOADER & DRAG-N-DROP GALLERY */}
+                <div className="space-y-2 pt-2 border-t border-slate-800">
+                  <label className="block text-[10px] text-slate-400 uppercase">Product Image Gallery</label>
+
+                  {/* Thumbnail Preview Grid */}
+                  {images.length > 0 && (
+                    <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mb-3">
+                      {images.map((img, idx) => (
+                        <div key={idx} className="relative group rounded-xl overflow-hidden border border-slate-700 bg-slate-950 h-24">
+                          <img src={img} alt={`Product ${idx}`} className="w-full h-full object-cover" />
+                          {idx === 0 && (
+                            <span className="absolute top-1 left-1 bg-amber-500 text-slate-950 px-1.5 py-0.5 rounded font-bold text-[8px]">
+                              PRIMARY
+                            </span>
+                          )}
+                          <div className="absolute inset-0 bg-slate-950/70 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 transition-opacity">
+                            {idx > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => handleSetPrimaryImage(idx)}
+                                className="text-[9px] bg-amber-500 text-slate-950 font-bold px-1.5 py-0.5 rounded"
+                              >
+                                Make Primary
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveImage(idx)}
+                              className="text-[9px] bg-rose-500 text-white font-bold px-1.5 py-0.5 rounded"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Drag and Drop Zone */}
+                  <label className="block border-2 border-dashed border-slate-800 hover:border-amber-500/50 rounded-xl p-5 text-center cursor-pointer bg-slate-950/50 transition-colors">
+                    <span className="text-amber-400 font-semibold block text-xs">
+                      {uploadingImages ? 'Uploading Product Images...' : '📤 Click or Drag & Drop Product Images'}
+                    </span>
+                    <span className="text-slate-500 text-[10px] block mt-1">Select one or multiple images from your computer</span>
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      onChange={handleMultipleImageUpload}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
 
                 {/* Checkbox Flags */}
@@ -721,7 +799,7 @@ export default function AdminProductsPage() {
                     Cancel
                   </button>
                   <button type="submit" className="px-5 py-2 bg-amber-500 text-slate-950 font-semibold rounded-lg">
-                    {editingProduct ? 'Save Changes' : 'Create Product'}
+                    {editingProduct ? 'Save Changes' : 'Publish Product'}
                   </button>
                 </div>
               </form>
