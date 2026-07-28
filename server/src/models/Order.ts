@@ -40,6 +40,18 @@ const orderSchema = new Schema(
         timestamp: { type: Date, default: Date.now },
       },
     ],
+    pickupDetails: {
+      atelierName: { type: String, default: 'Prem Dhaga Main Atelier' },
+      contactPhone: { type: String, default: '+91 9876543210' },
+      address: { type: String, default: 'Raman Reti Road, Near ISKCON Temple' },
+      city: { type: String, default: 'Vrindavan' },
+      state: { type: String, default: 'Uttar Pradesh' },
+      zip: { type: String, default: '281121' },
+      country: { type: String, default: 'India' },
+    },
+    courierPartner: { type: String, default: 'Delhivery / Shiprocket' },
+    awbTrackingNumber: { type: String },
+    shippingLabelUrl: { type: String },
     shippingDetails: {
       name: { type: String, required: true },
       email: { type: String, required: true },
