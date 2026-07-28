@@ -7,6 +7,8 @@ import { useCart } from '../store/useCart';
 import { useAuth } from '../store/useAuth';
 import { Icons } from './Icons';
 
+import AuthModal from './AuthModal';
+
 const links = [
   { href: '/collections', label: 'Collections' },
   { href: '/custom', label: 'Bespoke' },
@@ -49,18 +51,19 @@ export default function Navbar() {
   const setIsOpen = useCart((state) => state.setIsOpen);
   const isLoggedIn = useAuth((state) => state.isLoggedIn);
   const user = useAuth((state) => state.user);
-  const login = useAuth((state) => state.login);
   const logout = useAuth((state) => state.logout);
   const [mounted, setMounted] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'register'>('login');
   const [query, setQuery] = useState('');
   const accountRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
 
-  const displayName = user?.name?.trim() || 'Akhil';
+  const displayName = user?.name?.trim() || 'Devotee';
   const initials = displayName
     .split(' ')
     .map((part) => part[0])
@@ -137,18 +140,10 @@ export default function Navbar() {
     setMenuOpen(false);
   };
 
-  const handleDemoLogin = (method: 'google' | 'phone' | 'email') => {
-    login(`demo-${method}-token`, {
-      id: `demo-${method}`,
-      name: 'Akhil',
-      email: method === 'phone' ? 'akhil.phone@premdhaga.local' : 'akhil@premdhaga.local',
-      phone: method === 'phone' ? '+91 98765 43210' : undefined,
-      role: 'customer',
-      language: 'English',
-      notificationsEnabled: true,
-      preferredPaymentMethod: 'UPI',
-    });
-    setAccountOpen(false);
+  const openAuth = (mode: 'login' | 'register') => {
+    setAuthModalMode(mode);
+    setAuthModalOpen(true);
+    closeOverlays();
   };
 
   return (
@@ -202,30 +197,26 @@ export default function Navbar() {
                           <div className="rounded-[1.4rem] border border-royal-gold/15 bg-royal-gold/[0.04] p-5">
                             <p className="font-display text-2xl text-ivory">Welcome to Prem Dhaga</p>
                             <p className="mt-2 font-body text-xs leading-5 text-cream/55">
-                              Sign in for saved addresses, wishlist, tracking, invoices and atelier rewards.
+                              Sign in with your Email or Phone to access saved addresses, wishlist, order tracking and rewards.
                             </p>
                           </div>
 
                           <div className="grid gap-2">
-                            <button type="button" onClick={() => handleDemoLogin('google')} className="account-action">
-                              <span>Continue with Google</span>
-                              <span>OAuth</span>
+                            <button type="button" onClick={() => openAuth('login')} className="account-action">
+                              <span>Sign In with Credentials</span>
+                              <span>Login</span>
                             </button>
-                            <button type="button" onClick={() => handleDemoLogin('phone')} className="account-action">
-                              <span>Continue with Phone Number</span>
-                              <span>OTP</span>
-                            </button>
-                            <button type="button" onClick={() => handleDemoLogin('email')} className="account-action">
-                              <span>Continue with Email</span>
-                              <span>Password</span>
+                            <button type="button" onClick={() => openAuth('register')} className="account-action">
+                              <span>Create Devotional ID</span>
+                              <span>Register</span>
                             </button>
                           </div>
 
                           <div className="grid grid-cols-2 gap-2">
-                            <Link href="/checkout" onClick={closeOverlays} className="account-mini-link">Create Account</Link>
-                            <Link href="/checkout" onClick={closeOverlays} className="account-mini-link">Guest Checkout</Link>
-                            <Link href="/account" onClick={closeOverlays} className="account-mini-link">Wishlist</Link>
-                            <Link href="/collections" onClick={closeOverlays} className="account-mini-link">Recently Viewed</Link>
+                            <Link href="/register" onClick={closeOverlays} className="account-mini-link">Register ID</Link>
+                            <Link href="/login" onClick={closeOverlays} className="account-mini-link">Sign In</Link>
+                            <Link href="/checkout" onClick={closeOverlays} className="account-mini-link">Checkout</Link>
+                            <Link href="/collections" onClick={closeOverlays} className="account-mini-link">Browse Offerings</Link>
                           </div>
                         </>
                       ) : (
@@ -410,6 +401,12 @@ export default function Navbar() {
             </div>
           </div>
         )}
+
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        defaultMode={authModalMode}
+      />
     </>
   );
 }

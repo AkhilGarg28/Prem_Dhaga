@@ -10,13 +10,31 @@ export const register = async (req: Request, res: Response) => {
   try {
     const { name, email, password, role, phone } = req.body;
 
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Please provide all required fields' });
+    const cleanName = name ? String(name).trim() : '';
+    const cleanEmail = email ? String(email).trim().toLowerCase() : '';
+    const cleanPhone = phone ? String(phone).trim() : '';
+
+    if (!cleanName || !cleanEmail || !cleanPhone || !password) {
+      return res.status(400).json({ error: 'Please insert all required credentials: Name, Email, Phone number, and Password' });
     }
 
-    const existingUser = await User.findOne({ email });
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters long' });
+    }
+
+    // Check if email or phone is already registered
+    const existingUser = await User.findOne({
+      $or: [
+        { email: cleanEmail },
+        { phone: cleanPhone }
+      ]
+    });
+
     if (existingUser) {
-      return res.status(400).json({ error: 'Email already in use' });
+      if (existingUser.email === cleanEmail) {
+        return res.status(400).json({ error: 'An account with this email address already exists' });
+      }
+      return res.status(400).json({ error: 'An account with this phone number already exists' });
     }
 
     const salt = await bcrypt.genSalt(10);
@@ -46,10 +64,10 @@ export const register = async (req: Request, res: Response) => {
     }
 
     const newUser = new User({
-      name,
-      email,
+      name: cleanName,
+      email: cleanEmail,
       password: hashedPassword,
-      phone: phone || '',
+      phone: cleanPhone,
       role: assignedRole,
       savedAddresses: [],
       wishlist: [],
@@ -75,26 +93,34 @@ export const register = async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || 'Error creating user' });
+    return res.status(500).json({ error: error.message || 'Error creating user account' });
   }
 };
 
 export const login = async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const { email, phone, identifier, password } = req.body;
+    const loginId = (identifier || email || phone || '').trim();
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Please provide email and password' });
+    if (!loginId || !password) {
+      return res.status(400).json({ error: 'Please enter your email address or phone number and password' });
     }
 
-    const user = await User.findOne({ email });
+    const cleanId = loginId.toLowerCase();
+    const user = await User.findOne({
+      $or: [
+        { email: cleanId },
+        { phone: loginId }
+      ]
+    });
+
     if (!user) {
-      return res.status(400).json({ error: 'Invalid credentials' });
+      return res.status(400).json({ error: 'Invalid credentials. No account found with provided details.' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ error: 'Invalid credentials' });
+      return res.status(400).json({ error: 'Invalid credentials. Password does not match.' });
     }
 
     const token = jwt.sign(

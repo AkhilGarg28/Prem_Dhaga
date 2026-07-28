@@ -22,7 +22,7 @@ export default function AccountDashboardPage() {
   // Redirect to login if not authenticated
   useEffect(() => {
     if (mounted && !isLoggedIn) {
-      router.push('/checkout');
+      router.push('/login');
     }
   }, [isLoggedIn, router, mounted]);
 
@@ -40,6 +40,7 @@ export default function AccountDashboardPage() {
 
   // Profile Edit fields
   const [profileName, setProfileName] = useState(user?.name || '');
+  const [profileEmail, setProfileEmail] = useState(user?.email || '');
   const [profilePhone, setProfilePhone] = useState(user?.phone || '');
   const [profilePhoto, setProfilePhoto] = useState(user?.profilePhoto || '');
   const [profileLang, setProfileLang] = useState(user?.language || 'English');
@@ -128,6 +129,7 @@ export default function AccountDashboardPage() {
     
     // Reset inputs
     setProfileName(user?.name || '');
+    setProfileEmail(user?.email || '');
     setProfilePhone(user?.phone || '');
     setProfilePhoto(user?.profilePhoto || '');
     setProfileLang(user?.language || 'English');
@@ -157,6 +159,7 @@ export default function AccountDashboardPage() {
         },
         body: JSON.stringify({
           name: profileName,
+          email: profileEmail,
           phone: profilePhone,
           profilePhoto,
           language: profileLang,
@@ -171,6 +174,7 @@ export default function AccountDashboardPage() {
 
       updateProfileState({
         name: profileName,
+        email: profileEmail,
         phone: profilePhone,
         profilePhoto,
         language: profileLang,
@@ -498,17 +502,28 @@ export default function AccountDashboardPage() {
                     />
                   </div>
                   <div className="space-y-1">
+                    <label className="font-utility text-[10px] text-warm-beige/50 uppercase tracking-widest block">Email Address</label>
+                    <input
+                      type="email"
+                      value={profileEmail}
+                      onChange={(e) => setProfileEmail(e.target.value)}
+                      className="w-full bg-deep-charcoal border border-royal-gold/15 focus:border-royal-gold p-2.5 text-xs text-ivory outline-none rounded-sm"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
                     <label className="font-utility text-[10px] text-warm-beige/50 uppercase tracking-widest block">Phone Number</label>
                     <input
                       type="text"
                       value={profilePhone}
                       onChange={(e) => setProfilePhone(e.target.value)}
                       className="w-full bg-deep-charcoal border border-royal-gold/15 focus:border-royal-gold p-2.5 text-xs text-ivory outline-none rounded-sm"
+                      required
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label className="font-utility text-[10px] text-warm-beige/50 uppercase tracking-widest block">Preferred Language</label>
                     <select
