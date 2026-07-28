@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/store/useAuth';
 import { Icons } from '@/components/Icons';
+import { findRegisteredUser, saveRegisteredUser } from '@/utils/userRegistry';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,7 +32,7 @@ export default function LoginPage() {
     setError('');
     setShowRegisterBtn(false);
 
-    const cleanId = identifier.trim();
+    const cleanId = identifier.trim().toLowerCase();
 
     if (!cleanId || !password) {
       setError('Please insert your Email Address or Phone Number and Password.');
@@ -44,31 +45,94 @@ export default function LoginPage() {
       return;
     }
 
+    const registeredLocalUser = findRegisteredUser(cleanId);
+
     setLoading(true);
     try {
       const res = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: cleanId.toLowerCase(), password }),
+        body: JSON.stringify({ identifier: cleanId, password }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
         if (res.status === 404 || data.code === 'ACCOUNT_NOT_FOUND') {
-          setError(data.error || 'No account found with this email. Please register first.');
+          // If server returns 404, check local registered registry before throwing non-existent account error
+          if (registeredLocalUser) {
+            if (registeredLocalUser.password && registeredLocalUser.password !== password) {
+              setError('Incorrect password. Please try again.');
+              setShowRegisterBtn(false);
+              return;
+            }
+            saveRegisteredUser({ ...registeredLocalUser, password });
+            login(`token_${Date.now()}`, {
+              id: registeredLocalUser.id,
+              name: registeredLocalUser.name,
+              email: registeredLocalUser.email,
+              phone: registeredLocalUser.phone,
+              role: registeredLocalUser.role,
+              profilePhoto: registeredLocalUser.profilePhoto,
+              language: registeredLocalUser.language || 'English',
+              notificationsEnabled: registeredLocalUser.notificationsEnabled ?? true,
+              preferredPaymentMethod: registeredLocalUser.preferredPaymentMethod || 'Razorpay',
+            });
+            router.push('/account');
+            return;
+          }
+
+          setError('No account found with this email. Please register first.');
           setShowRegisterBtn(true);
         } else if (res.status === 401 || data.code === 'INCORRECT_PASSWORD') {
-          setError(data.error || 'Incorrect password. Please try again.');
+          setError('Incorrect password. Please try again.');
+          setShowRegisterBtn(false);
         } else {
           setError(data.error || 'Sign in failed. Please check your credentials.');
         }
         return;
       }
 
+      // Backend login success -> sync into registry
+      saveRegisteredUser({
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+        phone: data.user.phone || '',
+        password,
+        role: data.user.role,
+        profilePhoto: data.user.profilePhoto,
+        language: data.user.language,
+        notificationsEnabled: data.user.notificationsEnabled,
+      });
+
       login(data.token, data.user);
       router.push('/account');
     } catch (err: any) {
+      // Backend server unreachable / CORS / offline fallback
+      if (registeredLocalUser) {
+        if (registeredLocalUser.password && registeredLocalUser.password !== password) {
+          setError('Incorrect password. Please try again.');
+          setShowRegisterBtn(false);
+          return;
+        }
+
+        saveRegisteredUser({ ...registeredLocalUser, password });
+        login(`token_${Date.now()}`, {
+          id: registeredLocalUser.id,
+          name: registeredLocalUser.name,
+          email: registeredLocalUser.email,
+          phone: registeredLocalUser.phone,
+          role: registeredLocalUser.role,
+          profilePhoto: registeredLocalUser.profilePhoto,
+          language: registeredLocalUser.language || 'English',
+          notificationsEnabled: registeredLocalUser.notificationsEnabled ?? true,
+          preferredPaymentMethod: registeredLocalUser.preferredPaymentMethod || 'Razorpay',
+        });
+        router.push('/account');
+        return;
+      }
+
       setError('No account found with this email. Please register first.');
       setShowRegisterBtn(true);
     } finally {

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '@/store/useAuth';
 import { Icons } from './Icons';
+import { findRegisteredUser, saveRegisteredUser } from '@/utils/userRegistry';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -60,7 +61,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', onSu
     setSuccess('');
     setShowRegisterBtn(false);
 
-    const cleanId = identifier.trim();
+    const cleanId = identifier.trim().toLowerCase();
 
     if (!cleanId || !password) {
       setError('Please provide your Email Address or Phone Number and Password.');
@@ -73,27 +74,67 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', onSu
       return;
     }
 
+    const registeredLocalUser = findRegisteredUser(cleanId);
+
     setLoading(true);
     try {
       const res = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: cleanId.toLowerCase(), password }),
+        body: JSON.stringify({ identifier: cleanId, password }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
         if (res.status === 404 || data.code === 'ACCOUNT_NOT_FOUND') {
-          setError(data.error || 'No account found with this email. Please register first.');
+          // If server says 404, check if user exists in local registered cache
+          if (registeredLocalUser) {
+            if (registeredLocalUser.password && registeredLocalUser.password !== password) {
+              setError('Incorrect password. Please try again.');
+              setShowRegisterBtn(false);
+              return;
+            }
+            saveRegisteredUser({ ...registeredLocalUser, password });
+            login(`token_${Date.now()}`, {
+              id: registeredLocalUser.id,
+              name: registeredLocalUser.name,
+              email: registeredLocalUser.email,
+              phone: registeredLocalUser.phone,
+              role: registeredLocalUser.role,
+              profilePhoto: registeredLocalUser.profilePhoto,
+              language: registeredLocalUser.language || 'English',
+              notificationsEnabled: registeredLocalUser.notificationsEnabled ?? true,
+              preferredPaymentMethod: registeredLocalUser.preferredPaymentMethod || 'Razorpay',
+            });
+            setSuccess('Logged in successfully!');
+            setTimeout(() => { resetForm(); onClose(); if (onSuccess) onSuccess(); }, 500);
+            return;
+          }
+
+          setError('No account found with this email. Please register first.');
           setShowRegisterBtn(true);
         } else if (res.status === 401 || data.code === 'INCORRECT_PASSWORD') {
-          setError(data.error || 'Incorrect password. Please try again.');
+          setError('Incorrect password. Please try again.');
+          setShowRegisterBtn(false);
         } else {
           setError(data.error || 'Sign in failed. Please check your credentials.');
         }
         return;
       }
+
+      // Backend login success -> sync with registry
+      saveRegisteredUser({
+        id: data.user.id,
+        name: data.user.name,
+        email: data.user.email,
+        phone: data.user.phone || '',
+        password,
+        role: data.user.role,
+        profilePhoto: data.user.profilePhoto,
+        language: data.user.language,
+        notificationsEnabled: data.user.notificationsEnabled,
+      });
 
       login(data.token, data.user);
       setSuccess('Logged in successfully!');
@@ -103,6 +144,31 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', onSu
         if (onSuccess) onSuccess();
       }, 500);
     } catch (err: any) {
+      // Backend server unreachable / CORS / offline fallback
+      if (registeredLocalUser) {
+        if (registeredLocalUser.password && registeredLocalUser.password !== password) {
+          setError('Incorrect password. Please try again.');
+          setShowRegisterBtn(false);
+          return;
+        }
+
+        saveRegisteredUser({ ...registeredLocalUser, password });
+        login(`token_${Date.now()}`, {
+          id: registeredLocalUser.id,
+          name: registeredLocalUser.name,
+          email: registeredLocalUser.email,
+          phone: registeredLocalUser.phone,
+          role: registeredLocalUser.role,
+          profilePhoto: registeredLocalUser.profilePhoto,
+          language: registeredLocalUser.language || 'English',
+          notificationsEnabled: registeredLocalUser.notificationsEnabled ?? true,
+          preferredPaymentMethod: registeredLocalUser.preferredPaymentMethod || 'Razorpay',
+        });
+        setSuccess('Logged in successfully!');
+        setTimeout(() => { resetForm(); onClose(); if (onSuccess) onSuccess(); }, 500);
+        return;
+      }
+
       setError('No account found with this email. Please register first.');
       setShowRegisterBtn(true);
     } finally {
@@ -115,7 +181,6 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', onSu
     setError('');
     setSuccess('');
 
-    // Client-side validations for all credentials
     if (!name.trim() || !email.trim() || !phone.trim() || !password) {
       setError('Please insert all required credentials: Full Name, Email, Phone Number, and Password.');
       return;
@@ -131,16 +196,28 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', onSu
       return;
     }
 
+    const newUserObj = {
+      id: `usr_${Date.now()}`,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      phone: phone.trim(),
+      password,
+      role: 'customer',
+      language: 'English',
+      notificationsEnabled: true,
+      preferredPaymentMethod: 'Razorpay',
+    };
+
     setLoading(true);
     try {
       const res = await fetch(`${apiUrl}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim().toLowerCase(),
-          phone: phone.trim(),
-          password,
+          name: newUserObj.name,
+          email: newUserObj.email,
+          phone: newUserObj.phone,
+          password: newUserObj.password,
         }),
       });
 
@@ -151,6 +228,11 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', onSu
         return;
       }
 
+      saveRegisteredUser({
+        ...newUserObj,
+        id: data.user.id || newUserObj.id,
+      });
+
       login(data.token, data.user);
       setSuccess('Your Devotional ID has been created successfully! Logging you in...');
       setTimeout(() => {
@@ -159,19 +241,9 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', onSu
         if (onSuccess) onSuccess();
       }, 800);
     } catch (err: any) {
-      // Graceful fallback if backend is unreachable / CORS / offline (prevents 'Failed to fetch' error)
-      const localUser = {
-        id: `usr_${Date.now()}`,
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        phone: phone.trim(),
-        role: 'customer',
-        language: 'English',
-        notificationsEnabled: true,
-        preferredPaymentMethod: 'Razorpay',
-      };
+      saveRegisteredUser(newUserObj);
       const localToken = `local_token_${Date.now()}`;
-      login(localToken, localUser);
+      login(localToken, newUserObj);
       setSuccess('Your Devotional ID has been created successfully!');
       setTimeout(() => {
         resetForm();

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/store/useAuth';
 import { Icons } from '@/components/Icons';
+import { saveRegisteredUser } from '@/utils/userRegistry';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -28,6 +29,8 @@ export default function RegisterPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+
     setError('');
 
     if (!name.trim() || !email.trim() || !phone.trim() || !password) {
@@ -45,16 +48,28 @@ export default function RegisterPage() {
       return;
     }
 
+    const newUserObj = {
+      id: `usr_${Date.now()}`,
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+      phone: phone.trim(),
+      password,
+      role: 'customer',
+      language: 'English',
+      notificationsEnabled: true,
+      preferredPaymentMethod: 'Razorpay',
+    };
+
     setLoading(true);
     try {
       const res = await fetch(`${apiUrl}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim().toLowerCase(),
-          phone: phone.trim(),
-          password,
+          name: newUserObj.name,
+          email: newUserObj.email,
+          phone: newUserObj.phone,
+          password: newUserObj.password,
         }),
       });
 
@@ -65,22 +80,17 @@ export default function RegisterPage() {
         return;
       }
 
+      saveRegisteredUser({
+        ...newUserObj,
+        id: data.user?.id || newUserObj.id,
+      });
+
       login(data.token, data.user);
       router.push('/account');
     } catch (err: any) {
-      // Graceful fallback if backend is unreachable / CORS / offline (prevents 'Failed to fetch' error)
-      const localUser = {
-        id: `usr_${Date.now()}`,
-        name: name.trim(),
-        email: email.trim().toLowerCase(),
-        phone: phone.trim(),
-        role: 'customer',
-        language: 'English',
-        notificationsEnabled: true,
-        preferredPaymentMethod: 'Razorpay',
-      };
+      saveRegisteredUser(newUserObj);
       const localToken = `local_token_${Date.now()}`;
-      login(localToken, localUser);
+      login(localToken, newUserObj);
       router.push('/account');
     } finally {
       setLoading(false);
