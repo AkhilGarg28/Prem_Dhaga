@@ -185,38 +185,34 @@ export default function OrderTrackingPage({ params }: { params: { id: string } }
     );
   }
 
-  // Complete status timeline tracking steps
+  // Complete 8-stage customer tracking timeline
   const timelineStages = [
-    { status: 'pending', label: 'Placed' },
-    { status: 'paid', label: 'Paid' },
-    { status: 'confirmed', label: 'Confirmed' },
-    { status: 'preparing', label: 'Preparing' },
-    { status: 'packaging', label: 'Packaging' },
-    { status: 'shipped', label: 'Shipped' },
-    { status: 'in_transit', label: 'Transit' },
+    { status: 'pending_admin_review', label: 'Admin Review' },
+    { status: 'approved', label: 'Approved' },
+    { status: 'shipment_created', label: 'Shipment Created' },
+    { status: 'awb_generated', label: 'AWB Generated' },
+    { status: 'dispatched', label: 'Dispatched' },
+    { status: 'in_transit', label: 'In Transit' },
     { status: 'out_for_delivery', label: 'Out for Delivery' },
     { status: 'delivered', label: 'Delivered' },
-    { status: 'completed', label: 'Completed' },
   ];
 
-  // Granular backend status map
+  // Granular backend status map for active tracking index
   const statusAliasMap: Record<string, number> = {
+    pending_admin_review: 0,
     pending: 0,
-    paid: 1,
-    confirmed: 2,
-    stitching: 3,
-    quality_check: 3,
-    preparing: 3,
-    packed: 4,
-    packaging: 4,
-    ready_for_pickup: 4,
-    shipped: 5,
-    in_transit: 6,
-    out_for_delivery: 7,
-    delivered: 8,
-    completed: 9,
+    paid: 0,
+    approved: 1,
+    processing: 2,
+    shipment_created: 2,
+    awb_generated: 3,
+    shipped: 3,
+    dispatched: 4,
+    in_transit: 5,
+    out_for_delivery: 6,
+    delivered: 7,
+    completed: 7,
     cancelled: 0,
-    refunded: 0,
     returned: 0,
   };
 

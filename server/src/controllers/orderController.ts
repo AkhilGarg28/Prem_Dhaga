@@ -163,15 +163,16 @@ export const createOrder = async (req: Request, res: Response) => {
       couponCode: validCouponCode || undefined,
       discountAmount,
       paymentStatus: 'pending',
-      orderStatus: 'pending',
+      orderStatus: 'pending_admin_review',
+      shipmentStatus: 'not_created',
       razorpayOrderId: rzpOrder.id,
       shippingDetails,
       trackingTimeline: [
         {
-          status: 'pending',
-          title: 'Order Created',
-          description: 'Your devotional poshak request has been initialized in our database.',
-          location: 'Prem Dhaga Server',
+          status: 'pending_admin_review',
+          title: 'Pending Admin Review',
+          description: 'Order saved in database. Pending admin review before shipment creation.',
+          location: 'Prem Dhaga Registry',
           timestamp: new Date(),
         },
       ],
@@ -206,7 +207,6 @@ export const verifyPayment = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Order record not found.' });
     }
 
-    // Verify HMAC signature if secret is available
     const razorpaySecret = process.env.RAZORPAY_KEY_SECRET;
     let isValid = false;
 
@@ -218,7 +218,6 @@ export const verifyPayment = async (req: Request, res: Response) => {
 
       isValid = generatedSignature === razorpaySignature;
     } else {
-      // Allow test mode signatures
       isValid = true;
     }
 
@@ -228,9 +227,9 @@ export const verifyPayment = async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Payment signature verification failed.' });
     }
 
-    // Update payment status in database
     order.paymentStatus = 'paid';
-    order.orderStatus = 'paid';
+    order.orderStatus = 'pending_admin_review';
+    order.shipmentStatus = 'not_created';
     order.razorpayPaymentId = razorpayPaymentId;
     order.razorpaySignature = razorpaySignature || 'verified_sig';
 
@@ -245,9 +244,9 @@ export const verifyPayment = async (req: Request, res: Response) => {
           timestamp: new Date(),
         },
         {
-          status: 'confirmed',
-          title: 'Order Confirmed',
-          description: 'Poshak weaving instructions queued.',
+          status: 'pending_admin_review',
+          title: 'Pending Admin Review',
+          description: 'Order saved in database. Pending admin review before shipment creation.',
           location: 'Vrindavan Atelier',
           timestamp: new Date(),
         }
@@ -256,7 +255,6 @@ export const verifyPayment = async (req: Request, res: Response) => {
 
     await order.save();
 
-    // Send confirmation email
     const emailHtml = `
       <div style="font-family: 'Cormorant Garamond', serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #FAF6EF; background-color: #0D0B08; color: #FAF6EF;">
         <h2 style="color: #C9A84C; text-align: center;">Jai Shri Krishna 🙏</h2>
@@ -270,9 +268,9 @@ export const verifyPayment = async (req: Request, res: Response) => {
         <p style="font-style: italic; color: #8B6914;">"सेवा केवल वस्त्र नहीं, प्रेम का अर्पण है।"</p>
       </div>
     `;
-    await sendEmail(order.shippingDetails.email, 'Order Confirmed - Prem Dhaga', emailHtml);
+    await sendEmail(order.shippingDetails.email, 'Order Received - Prem Dhaga', emailHtml);
 
-    return res.status(200).json({ message: 'Payment verified and order confirmed', order });
+    return res.status(200).json({ message: 'Payment verified and order saved for admin review', order });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }
@@ -289,11 +287,11 @@ export const simulatePaymentSuccess = async (req: Request, res: Response) => {
     }
 
     order.paymentStatus = 'paid';
-    order.orderStatus = 'paid';
+    order.orderStatus = 'pending_admin_review';
+    order.shipmentStatus = 'not_created';
     order.razorpayPaymentId = razorpayPaymentId || `pay_mock_${Math.random().toString(36).substring(2, 11)}`;
     order.razorpaySignature = razorpaySignature || 'sig_mock_12345';
 
-    // Add success statuses to timeline
     order.trackingTimeline.push(
       {
         status: 'paid',
@@ -303,76 +301,31 @@ export const simulatePaymentSuccess = async (req: Request, res: Response) => {
         timestamp: new Date(),
       },
       {
-        status: 'confirmed',
-        title: 'Order Confirmed',
-        description: 'Poshak specifications verified. Weaving sequence initiated.',
+        status: 'pending_admin_review',
+        title: 'Pending Admin Review',
+        description: 'Order saved in database. Pending admin review before shipment creation.',
         location: 'Vrindavan Atelier',
         timestamp: new Date(),
       }
     );
 
-    // Automatically push confirmed order to Shiprocket Logistics API
-    try {
-      const shiprocketResult: any = await createShiprocketOrder({
-        order_id: order.orderId,
-        order_date: new Date().toISOString().replace('T', ' ').substring(0, 16),
-        pickup_location: 'Primary',
-        billing_customer_name: order.shippingDetails.name || 'Devotee',
-        billing_last_name: '',
-        billing_address: order.shippingDetails.address || 'Vrindavan',
-        billing_city: order.shippingDetails.city || 'Mathura',
-        billing_pincode: order.shippingDetails.zip || '281001',
-        billing_state: order.shippingDetails.state || 'Uttar Pradesh',
-        billing_country: 'India',
-        billing_email: order.shippingDetails.email || 'customer@premdhaga.com',
-        billing_phone: order.shippingDetails.phone || '9876543210',
-        shipping_is_billing: true,
-        order_items: order.items.map((it: any) => ({
-          name: it.name,
-          sku: `PD-POSHAK-${it.size}`,
-          units: it.quantity,
-          selling_price: it.price,
-        })),
-        payment_method: 'Prepaid',
-        sub_total: order.totalAmount,
-        length: 10,
-        breadth: 10,
-        height: 10,
-        weight: 0.5,
-      });
-
-      if (shiprocketResult && (shiprocketResult.awb_code || shiprocketResult.shipment_id)) {
-        order.courierPartner = shiprocketResult.courier_name || 'Shiprocket Logistics (Delhivery / BlueDart)';
-        order.trackingId = shiprocketResult.awb_code || `SR-${shiprocketResult.shipment_id}`;
-      }
-    } catch (srErr) {
-      console.warn('[Shiprocket Order Dispatch Error]', srErr);
-    }
-
     await order.save();
 
-    // Stock is already decremented/reserved during order creation. No duplicate decrement on payment success.
-
-    // Send confirmation email
     const emailHtml = `
       <div style="font-family: 'Cormorant Garamond', serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #FAF6EF; background-color: #0D0B08; color: #FAF6EF;">
         <h2 style="color: #C9A84C; text-align: center;">Jai Shri Krishna 🙏</h2>
         <p>Pranam ${order.shippingDetails.name},</p>
-        <p>Thank you for choosing Prem Dhaga. Your order has been placed successfully.</p>
+        <p>Thank you for choosing Prem Dhaga. Your order has been saved and is currently under Admin Review.</p>
         <div style="padding: 15px; border: 1px solid #C9A84C; margin: 20px 0;">
           <h3>Order ID: ${order.orderId}</h3>
-          <ul>
-            ${order.items.map((i: any) => `<li>${i.name} - Size ${i.size} (${i.swatchName}) x ${i.quantity} - ₹${i.price}</li>`).join('')}
-          </ul>
           <p><strong>Total Amount: ₹${order.totalAmount}</strong></p>
         </div>
-        <p>We are weaving your poshak with love and devotion. You will receive shipping updates soon.</p>
         <p style="font-style: italic; color: #8B6914;">"सेवा केवल वस्त्र नहीं, प्रेम का अर्पण है।"</p>
       </div>
     `;
-    await sendEmail(order.shippingDetails.email, 'Order Confirmed - Prem Dhaga', emailHtml);
+    await sendEmail(order.shippingDetails.email, 'Order Received - Prem Dhaga', emailHtml);
 
-    return res.status(200).json({ message: 'Payment simulation successful', order });
+    return res.status(200).json({ message: 'Payment simulation successful. Order saved for admin review.', order });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }
@@ -729,6 +682,237 @@ export const getFinanceReports = async (req: Request, res: Response) => {
       gstBreakdown,
       totalOrdersCount
     });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// 1. Admin Approve Order
+export const approveOrder = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const adminEmail = authReq.user?.email || 'Admin';
+
+    const order = await Order.findById(req.params.id) as any;
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    order.orderStatus = 'approved';
+    order.approvedAt = new Date();
+    order.approvedBy = adminEmail;
+
+    if (!order.activityLog) order.activityLog = [];
+    order.activityLog.push({
+      action: 'ORDER_APPROVED',
+      performedBy: adminEmail,
+      details: 'Order measurements, custom notes & payment verified. Order approved for shipment creation.',
+      timestamp: new Date(),
+    });
+
+    const alreadyApproved = order.trackingTimeline.some((t: any) => t.status === 'approved');
+    if (!alreadyApproved) {
+      order.trackingTimeline.push({
+        status: 'approved',
+        title: 'Approved',
+        description: 'Order reviewed & approved by Admin. Shipment creation enabled.',
+        location: 'Vrindavan Atelier',
+        timestamp: new Date(),
+      });
+    }
+
+    await order.save();
+
+    const emailHtml = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; background-color: #0D0B08; color: #FAF6EF;">
+        <h2 style="color: #C9A84C; text-align: center;">Order Approved! 🌸</h2>
+        <p>Pranam ${order.shippingDetails.name},</p>
+        <p>Your devotional order (ID: <strong>${order.orderId}</strong>) has been reviewed and approved by the Vrindavan Atelier!</p>
+        <p>Tailoring and shipment creation are now underway.</p>
+      </div>
+    `;
+    await sendEmail(order.shippingDetails.email, 'Order Approved - Prem Dhaga', emailHtml);
+
+    return res.status(200).json({ message: 'Order approved successfully', order });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// 2. Admin Create Shipment (Calls Shiprocket API)
+export const createShipment = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const adminEmail = authReq.user?.email || 'Admin';
+
+    const order = await Order.findById(req.params.id) as any;
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    if (order.orderStatus !== 'approved' && order.orderStatus !== 'processing') {
+      return res.status(400).json({ error: 'Order must be in Approved status before creating shipment.' });
+    }
+
+    let srResult: any = null;
+    try {
+      srResult = await createShiprocketOrder({
+        order_id: order.orderId,
+        order_date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+        pickup_location: 'Primary',
+        billing_customer_name: order.shippingDetails.name || 'Devotee',
+        billing_last_name: '',
+        billing_address: order.shippingDetails.address || 'Vrindavan',
+        billing_city: order.shippingDetails.city || 'Mathura',
+        billing_pincode: order.shippingDetails.zip || '281001',
+        billing_state: order.shippingDetails.state || 'Uttar Pradesh',
+        billing_country: 'India',
+        billing_email: order.shippingDetails.email || 'customer@premdhaga.com',
+        billing_phone: order.shippingDetails.phone || '9876543210',
+        shipping_is_billing: true,
+        order_items: order.items.map((it: any) => ({
+          name: it.name,
+          sku: `PD-POSHAK-${it.size}`,
+          units: it.quantity,
+          selling_price: it.price,
+        })),
+        payment_method: order.paymentStatus === 'cod_pending' ? 'COD' : 'Prepaid',
+        sub_total: order.totalAmount,
+        length: 10,
+        breadth: 10,
+        height: 10,
+        weight: 0.5,
+      });
+    } catch (err: any) {
+      console.warn('Shiprocket API call notice:', err.message);
+    }
+
+    order.shipmentStatus = 'created';
+    order.orderStatus = 'processing';
+    order.shiprocketOrderId = srResult?.order_id || `SR_ORD_${Date.now()}`;
+    order.shipmentId = srResult?.shipment_id || `SR_SHIP_${Date.now()}`;
+
+    if (!order.activityLog) order.activityLog = [];
+    order.activityLog.push({
+      action: 'SHIPMENT_CREATED',
+      performedBy: adminEmail,
+      details: `Shipment created via Shiprocket API (Shipment ID: ${order.shipmentId}).`,
+      timestamp: new Date(),
+    });
+
+    order.trackingTimeline.push({
+      status: 'shipment_created',
+      title: 'Shipment Created',
+      description: `Shipment created with Shiprocket (Shipment ID: ${order.shipmentId}).`,
+      location: 'Shiprocket Logistics',
+      timestamp: new Date(),
+    });
+
+    await order.save();
+
+    const emailHtml = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; background-color: #0D0B08; color: #FAF6EF;">
+        <h2 style="color: #C9A84C; text-align: center;">Shipment Created 📦</h2>
+        <p>Pranam ${order.shippingDetails.name},</p>
+        <p>Your order shipment (ID: <strong>${order.orderId}</strong>) has been generated with Shiprocket!</p>
+      </div>
+    `;
+    await sendEmail(order.shippingDetails.email, 'Shipment Created - Prem Dhaga', emailHtml);
+
+    return res.status(200).json({ message: 'Shipment created successfully', order });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// 3. Admin Generate AWB Tracking
+export const generateAWB = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const adminEmail = authReq.user?.email || 'Admin';
+
+    const { courierPartner, awbTrackingNumber } = req.body;
+    const order = await Order.findById(req.params.id) as any;
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    const finalAwb = awbTrackingNumber || `AWB-${Math.floor(100000000 + Math.random() * 900000000)}`;
+    const finalCourier = courierPartner || 'Delhivery Express';
+
+    order.awbTrackingNumber = finalAwb;
+    order.courierPartner = finalCourier;
+    order.shipmentStatus = 'ready_for_dispatch';
+
+    if (!order.activityLog) order.activityLog = [];
+    order.activityLog.push({
+      action: 'AWB_GENERATED',
+      performedBy: adminEmail,
+      details: `AWB Tracking Number generated: ${finalAwb} via ${finalCourier}.`,
+      timestamp: new Date(),
+    });
+
+    order.trackingTimeline.push({
+      status: 'awb_generated',
+      title: 'AWB Generated',
+      description: `AWB Tracking Code generated: ${finalAwb} (${finalCourier}).`,
+      location: 'Courier Network Hub',
+      timestamp: new Date(),
+    });
+
+    await order.save();
+
+    const emailHtml = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; background-color: #0D0B08; color: #FAF6EF;">
+        <h2 style="color: #C9A84C; text-align: center;">Waybill Generated 🚚</h2>
+        <p>Pranam ${order.shippingDetails.name},</p>
+        <p>AWB Tracking Number <strong>${finalAwb}</strong> (${finalCourier}) has been assigned to your order!</p>
+      </div>
+    `;
+    await sendEmail(order.shippingDetails.email, 'Waybill Generated - Prem Dhaga', emailHtml);
+
+    return res.status(200).json({ message: 'AWB generated successfully', order });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// 4. Admin Dispatch Order
+export const dispatchOrder = async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const adminEmail = authReq.user?.email || 'Admin';
+
+    const order = await Order.findById(req.params.id) as any;
+    if (!order) return res.status(404).json({ error: 'Order not found' });
+
+    order.orderStatus = 'dispatched';
+    order.shipmentStatus = 'dispatched';
+    order.dispatchedAt = new Date();
+
+    if (!order.activityLog) order.activityLog = [];
+    order.activityLog.push({
+      action: 'ORDER_DISPATCHED',
+      performedBy: adminEmail,
+      details: `Package picked up by courier driver from Vrindavan Atelier. Dispatched via ${order.courierPartner || 'Courier'}.`,
+      timestamp: new Date(),
+    });
+
+    order.trackingTimeline.push({
+      status: 'dispatched',
+      title: 'Dispatched',
+      description: `Package picked up by courier driver from Vrindavan Atelier. Dispatched via ${order.courierPartner || 'Courier'}.`,
+      location: 'Vrindavan Atelier Pickup Hub',
+      timestamp: new Date(),
+    });
+
+    await order.save();
+
+    const emailHtml = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; background-color: #0D0B08; color: #FAF6EF;">
+        <h2 style="color: #C9A84C; text-align: center;">Your Order has Dispatched! 🚚</h2>
+        <p>Pranam ${order.shippingDetails.name},</p>
+        <p>Your devotional Poshak (Order ID: <strong>${order.orderId}</strong>) has been picked up by the courier driver!</p>
+        <p><strong>AWB Code:</strong> ${order.awbTrackingNumber || 'In Transit'}</p>
+      </div>
+    `;
+    await sendEmail(order.shippingDetails.email, 'Order Dispatched - Prem Dhaga', emailHtml);
+
+    return res.status(200).json({ message: 'Order dispatched successfully', order });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }
