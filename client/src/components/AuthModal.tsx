@@ -27,6 +27,7 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', onSu
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showRegisterBtn, setShowRegisterBtn] = useState(false);
 
   if (!isOpen) return null;
 
@@ -41,21 +42,34 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', onSu
     setConfirmPassword('');
     setError('');
     setSuccess('');
+    setShowRegisterBtn(false);
   };
 
   const handleModeSwitch = (newMode: 'login' | 'register') => {
     setMode(newMode);
     setError('');
     setSuccess('');
+    setShowRegisterBtn(false);
   };
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return; // Prevent duplicate requests while loading
+
     setError('');
     setSuccess('');
+    setShowRegisterBtn(false);
 
-    if (!identifier.trim() || !password) {
+    const cleanId = identifier.trim();
+
+    if (!cleanId || !password) {
       setError('Please provide your Email Address or Phone Number and Password.');
+      return;
+    }
+
+    const isEmail = cleanId.includes('@');
+    if (isEmail && !/^\S+@\S+\.\S+$/.test(cleanId)) {
+      setError('Please enter a valid email address.');
       return;
     }
 
@@ -64,13 +78,20 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', onSu
       const res = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: identifier.trim(), password }),
+        body: JSON.stringify({ identifier: cleanId.toLowerCase(), password }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Failed to log in. Please check your credentials.');
+        if (res.status === 404 || data.code === 'ACCOUNT_NOT_FOUND') {
+          setError(data.error || 'No account found with this email. Please register first.');
+          setShowRegisterBtn(true);
+        } else if (res.status === 401 || data.code === 'INCORRECT_PASSWORD') {
+          setError(data.error || 'Incorrect password. Please try again.');
+        } else {
+          setError(data.error || 'Sign in failed. Please check your credentials.');
+        }
         return;
       }
 
@@ -82,26 +103,8 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', onSu
         if (onSuccess) onSuccess();
       }, 500);
     } catch (err: any) {
-      // Graceful fallback if backend is unreachable / CORS / offline (prevents 'Failed to fetch' error)
-      const isEmail = identifier.includes('@');
-      const localUser = {
-        id: `usr_${Date.now()}`,
-        name: isEmail ? identifier.split('@')[0] : 'Devotee',
-        email: isEmail ? identifier.trim().toLowerCase() : `${identifier.trim()}@premdhaga.local`,
-        phone: isEmail ? '' : identifier.trim(),
-        role: 'customer',
-        language: 'English',
-        notificationsEnabled: true,
-        preferredPaymentMethod: 'Razorpay',
-      };
-      const localToken = `local_token_${Date.now()}`;
-      login(localToken, localUser);
-      setSuccess('Logged in successfully!');
-      setTimeout(() => {
-        resetForm();
-        onClose();
-        if (onSuccess) onSuccess();
-      }, 500);
+      setError('No account found with this email. Please register first.');
+      setShowRegisterBtn(true);
     } finally {
       setLoading(false);
     }
@@ -235,8 +238,17 @@ export default function AuthModal({ isOpen, onClose, defaultMode = 'login', onSu
 
         {/* Status Alerts */}
         {error && (
-          <div className="mb-4 p-3 rounded-md bg-lotus-pink/10 border border-lotus-pink/30 text-lotus-pink text-xs font-utility">
-            {error}
+          <div className="mb-4 p-3.5 rounded-md bg-lotus-pink/10 border border-lotus-pink/30 text-lotus-pink text-xs font-utility space-y-2">
+            <p>{error}</p>
+            {showRegisterBtn && (
+              <button
+                type="button"
+                onClick={() => handleModeSwitch('register')}
+                className="w-full py-2 bg-royal-gold/20 hover:bg-royal-gold text-royal-gold hover:text-temple-black border border-royal-gold/40 font-utility text-xs uppercase tracking-widest font-bold rounded-md transition-all mt-1 shadow-sm"
+              >
+                Register Now →
+              </button>
+            )}
           </div>
         )}
         {success && (

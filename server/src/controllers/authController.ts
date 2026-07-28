@@ -100,27 +100,43 @@ export const register = async (req: Request, res: Response) => {
 export const login = async (req: Request, res: Response) => {
   try {
     const { email, phone, identifier, password } = req.body;
-    const loginId = (identifier || email || phone || '').trim();
+    const rawId = (identifier || email || phone || '').trim();
 
-    if (!loginId || !password) {
-      return res.status(400).json({ error: 'Please enter your email address or phone number and password' });
+    if (!rawId || !password) {
+      return res.status(400).json({
+        success: false,
+        code: 'MISSING_FIELDS',
+        error: 'Please enter your email address or phone number and password'
+      });
     }
 
-    const cleanId = loginId.toLowerCase();
+    const cleanId = rawId.toLowerCase();
+
+    // Query database for registered user by email (case-insensitive) or phone
     const user = await User.findOne({
       $or: [
         { email: cleanId },
-        { phone: loginId }
+        { phone: rawId }
       ]
     });
 
     if (!user) {
-      return res.status(400).json({ error: 'Invalid credentials. No account found with provided details.' });
+      console.warn(`[AUTH SECURITY] Login rejected: No registered user found for identifier "${cleanId}"`);
+      return res.status(404).json({
+        success: false,
+        code: 'ACCOUNT_NOT_FOUND',
+        error: 'No account found with this email. Please register first.'
+      });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ error: 'Invalid credentials. Password does not match.' });
+      console.warn(`[AUTH SECURITY] Login rejected: Password mismatch for user "${user.email}"`);
+      return res.status(401).json({
+        success: false,
+        code: 'INCORRECT_PASSWORD',
+        error: 'Incorrect password. Please try again.'
+      });
     }
 
     const token = jwt.sign(
@@ -130,6 +146,7 @@ export const login = async (req: Request, res: Response) => {
     );
 
     return res.status(200).json({
+      success: true,
       token,
       user: {
         id: user._id,
@@ -143,7 +160,12 @@ export const login = async (req: Request, res: Response) => {
       },
     });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message || 'Error logging in' });
+    console.error('[AUTH ERROR] Internal error during login:', error.message || error);
+    return res.status(500).json({
+      success: false,
+      code: 'SERVER_ERROR',
+      error: 'An unexpected error occurred during sign in. Please try again.'
+    });
   }
 };
 

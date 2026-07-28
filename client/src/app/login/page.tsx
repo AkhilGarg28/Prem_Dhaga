@@ -14,6 +14,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showRegisterBtn, setShowRegisterBtn] = useState(false);
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -25,10 +26,21 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    if (loading) return; // Prevent multiple requests while loading
 
-    if (!identifier.trim() || !password) {
+    setError('');
+    setShowRegisterBtn(false);
+
+    const cleanId = identifier.trim();
+
+    if (!cleanId || !password) {
       setError('Please insert your Email Address or Phone Number and Password.');
+      return;
+    }
+
+    const isEmail = cleanId.includes('@');
+    if (isEmail && !/^\S+@\S+\.\S+$/.test(cleanId)) {
+      setError('Please enter a valid email address.');
       return;
     }
 
@@ -37,34 +49,28 @@ export default function LoginPage() {
       const res = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier: identifier.trim(), password }),
+        body: JSON.stringify({ identifier: cleanId.toLowerCase(), password }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || 'Failed to authenticate. Please check your credentials.');
+        if (res.status === 404 || data.code === 'ACCOUNT_NOT_FOUND') {
+          setError(data.error || 'No account found with this email. Please register first.');
+          setShowRegisterBtn(true);
+        } else if (res.status === 401 || data.code === 'INCORRECT_PASSWORD') {
+          setError(data.error || 'Incorrect password. Please try again.');
+        } else {
+          setError(data.error || 'Sign in failed. Please check your credentials.');
+        }
         return;
       }
 
       login(data.token, data.user);
       router.push('/account');
     } catch (err: any) {
-      // Graceful fallback if backend is unreachable / CORS / offline (prevents 'Failed to fetch' error)
-      const isEmail = identifier.includes('@');
-      const localUser = {
-        id: `usr_${Date.now()}`,
-        name: isEmail ? identifier.split('@')[0] : 'Devotee',
-        email: isEmail ? identifier.trim().toLowerCase() : `${identifier.trim()}@premdhaga.local`,
-        phone: isEmail ? '' : identifier.trim(),
-        role: 'customer',
-        language: 'English',
-        notificationsEnabled: true,
-        preferredPaymentMethod: 'Razorpay',
-      };
-      const localToken = `local_token_${Date.now()}`;
-      login(localToken, localUser);
-      router.push('/account');
+      setError('No account found with this email. Please register first.');
+      setShowRegisterBtn(true);
     } finally {
       setLoading(false);
     }
@@ -84,8 +90,16 @@ export default function LoginPage() {
         </div>
 
         {error && (
-          <div className="mb-6 p-3.5 rounded-md bg-lotus-pink/10 border border-lotus-pink/30 text-lotus-pink text-xs font-utility text-center">
-            {error}
+          <div className="mb-6 p-4 rounded-md bg-lotus-pink/10 border border-lotus-pink/30 text-lotus-pink text-xs font-utility text-center space-y-3">
+            <p>{error}</p>
+            {showRegisterBtn && (
+              <Link
+                href="/register"
+                className="block w-full py-2.5 bg-royal-gold/20 hover:bg-royal-gold text-royal-gold hover:text-temple-black border border-royal-gold/40 font-utility text-xs uppercase tracking-widest font-bold rounded-md transition-all shadow-sm"
+              >
+                Register Now →
+              </Link>
+            )}
           </div>
         )}
 
