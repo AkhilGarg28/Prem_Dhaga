@@ -128,7 +128,7 @@ export const getShiprocketToken = async (): Promise<string | null> => {
       }),
     });
 
-    const data = await response.json();
+    const data = (await response.json()) as any;
     if (response.ok && data.token) {
       cachedShiprocketToken = data.token;
       tokenExpiryTime = Date.now() + 8 * 24 * 60 * 60 * 1000; // Cache 8 days
@@ -144,7 +144,7 @@ export const getShiprocketToken = async (): Promise<string | null> => {
   }
 };
 
-export const createShiprocketOrder = async (orderPayload: any) => {
+export const createShiprocketOrder = async (orderPayload: any): Promise<any> => {
   const token = await getShiprocketToken();
   if (!token || useShiprocketMock) {
     console.log('[Mock Shiprocket Order Creation]', orderPayload);
@@ -169,7 +169,7 @@ export const createShiprocketOrder = async (orderPayload: any) => {
       body: JSON.stringify(orderPayload),
     });
 
-    const data = await response.json();
+    const data = (await response.json()) as any;
     return data;
   } catch (err) {
     console.error('[Shiprocket Create Order Error]', err);
@@ -177,14 +177,20 @@ export const createShiprocketOrder = async (orderPayload: any) => {
   }
 };
 
-export const trackShiprocketShipment = async (awbCode: string) => {
+export const trackShiprocketShipment = async (awbCode: string): Promise<any> => {
   const token = await getShiprocketToken();
   if (!token || useShiprocketMock) {
     return {
       tracking_data: {
         track_status: 1,
         shipment_status: 7,
-        shipment_track: [{ current_status: 'Delivered', location: 'Vrindavan Altar' }],
+        shipment_track: [
+          {
+            current_status: 'Delivered',
+            location: 'Vrindavan Hub',
+            date: new Date().toISOString(),
+          },
+        ],
       },
     };
   }
@@ -193,7 +199,8 @@ export const trackShiprocketShipment = async (awbCode: string) => {
     const response = await fetch(`https://apiv2.shiprocket.in/v1/external/courier/track/awb/${awbCode}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    return await response.json();
+    const data = (await response.json()) as any;
+    return data;
   } catch (err) {
     console.error('[Shiprocket Track Error]', err);
     return null;

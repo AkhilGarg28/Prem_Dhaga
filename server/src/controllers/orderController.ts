@@ -313,7 +313,7 @@ export const simulatePaymentSuccess = async (req: Request, res: Response) => {
 
     // Automatically push confirmed order to Shiprocket Logistics API
     try {
-      const shiprocketResult = await createShiprocketOrder({
+      const shiprocketResult: any = await createShiprocketOrder({
         order_id: order.orderId,
         order_date: new Date().toISOString().replace('T', ' ').substring(0, 16),
         pickup_location: 'Primary',
