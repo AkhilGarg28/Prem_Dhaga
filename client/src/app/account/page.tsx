@@ -321,8 +321,6 @@ export default function AccountDashboardPage() {
 
       <div className="max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-4 gap-8 items-start relative z-10">
         
-      <div className="max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-4 gap-8 items-start relative z-10">
-        
         {/* MOBILE TOP BAR (< 768px) */}
         <div className="md:hidden col-span-1 glass-panel p-4 rounded-xl flex items-center justify-between shadow-xl border border-royal-gold/20">
           <div className="flex items-center gap-3">
