@@ -26,8 +26,9 @@ export default function AccountDashboardPage() {
     }
   }, [isLoggedIn, router, mounted]);
 
-  // Tab state
+  // Tab & Mobile Drawer state
   const [activeTab, setActiveTab] = useState<'profile' | 'orders' | 'addresses' | 'wishlist' | 'support'>('orders');
+  const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
 
   // API url
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
@@ -320,8 +321,150 @@ export default function AccountDashboardPage() {
 
       <div className="max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-4 gap-8 items-start relative z-10">
         
-        {/* LEFT COLUMN: LUXURY NAVIGATION SIDEBAR */}
-        <div className="profile-glass-card p-6 md:sticky md:top-28 z-20 space-y-6">
+      <div className="max-w-6xl mx-auto w-full grid grid-cols-1 md:grid-cols-4 gap-8 items-start relative z-10">
+        
+        {/* MOBILE TOP BAR (< 768px) */}
+        <div className="md:hidden col-span-1 glass-panel p-4 rounded-xl flex items-center justify-between shadow-xl border border-royal-gold/20">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full border border-royal-gold/40 bg-deep-charcoal overflow-hidden relative flex items-center justify-center">
+              {user?.profilePhoto ? (
+                <Image src={user.profilePhoto} alt="" fill sizes="40px" className="object-cover" />
+              ) : (
+                <Icons.User className="text-royal-gold/70" size={20} />
+              )}
+            </div>
+            <div>
+              <h2 className="font-display text-sm text-ivory font-semibold">{user?.name}</h2>
+              <span className="font-utility text-[8px] text-royal-gold uppercase tracking-widest">
+                {activeTab === 'orders' ? 'My Orders' : activeTab === 'profile' ? 'Profile Details' : activeTab === 'addresses' ? 'Addresses' : activeTab === 'wishlist' ? 'Wishlist' : 'Support Desk'}
+              </span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => setMobileDrawerOpen(true)}
+            className="font-utility text-[10px] uppercase tracking-wider bg-royal-gold/15 text-royal-gold border border-royal-gold/30 hover:border-royal-gold px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition-all"
+          >
+            <span>Menu</span>
+            <Icons.Menu size={14} />
+          </button>
+        </div>
+
+        {/* MOBILE SLIDE-IN ACCOUNT DRAWER (< 768px) */}
+        {mobileDrawerOpen && (
+          <div className="md:hidden fixed inset-0 z-[100] bg-temple-black/85 backdrop-blur-xl flex justify-end animate-fade-in">
+            <div className="w-full max-w-full sm:max-w-[420px] h-full bg-[#120e0a] border-l border-royal-gold/25 flex flex-col relative shadow-[0_0_80px_rgba(0,0,0,0.8)]">
+              <div className="absolute inset-0 temple-grain opacity-20 pointer-events-none" />
+
+              {/* FIXED MOBILE HEADER */}
+              <div className="relative p-6 border-b border-royal-gold/15 bg-royal-gold/[0.04] flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-full border-2 border-royal-gold/40 bg-royal-gold/10 overflow-hidden relative flex items-center justify-center shadow-md">
+                    {user?.profilePhoto ? (
+                      <Image src={user.profilePhoto} alt="" fill sizes="56px" className="object-cover" />
+                    ) : (
+                      <Icons.User className="text-royal-gold" size={28} />
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="font-display text-xl text-ivory">{user?.name}</h2>
+                    <p className="font-utility text-[9px] uppercase tracking-[0.22em] text-royal-gold mt-0.5">
+                      {user?.role || 'Customer'} • 1080 Seva Points
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setMobileDrawerOpen(false)}
+                  className="w-9 h-9 rounded-full border border-royal-gold/20 flex items-center justify-center text-warm-beige/60 hover:text-royal-gold hover:border-royal-gold transition-all"
+                  aria-label="Close mobile account menu"
+                >
+                  <Icons.Close size={18} />
+                </button>
+              </div>
+
+              {/* SCROLLABLE TOUCH CARDS MENU */}
+              <div className="relative flex-1 overflow-y-auto p-4 space-y-3 pb-28">
+                <button
+                  onClick={() => { setActiveTab('profile'); setMobileDrawerOpen(false); }}
+                  className={`mobile-touch-card ${activeTab === 'profile' ? 'mobile-touch-card-active' : ''}`}
+                >
+                  <span>My Profile</span>
+                  <Icons.ArrowRight size={15} />
+                </button>
+
+                <button
+                  onClick={() => { setActiveTab('orders'); setMobileDrawerOpen(false); }}
+                  className={`mobile-touch-card ${activeTab === 'orders' ? 'mobile-touch-card-active' : ''}`}
+                >
+                  <span>My Orders</span>
+                  <Icons.ArrowRight size={15} />
+                </button>
+
+                <button
+                  onClick={() => { setMobileDrawerOpen(false); router.push('/order/PD-172948234-108'); }}
+                  className="mobile-touch-card"
+                >
+                  <span>Track Orders</span>
+                  <Icons.ArrowRight size={15} />
+                </button>
+
+                <button
+                  onClick={() => { setActiveTab('wishlist'); setMobileDrawerOpen(false); }}
+                  className={`mobile-touch-card ${activeTab === 'wishlist' ? 'mobile-touch-card-active' : ''}`}
+                >
+                  <span>Spiritual Wishlist</span>
+                  <Icons.ArrowRight size={15} />
+                </button>
+
+                <button
+                  onClick={() => { setActiveTab('addresses'); setMobileDrawerOpen(false); }}
+                  className={`mobile-touch-card ${activeTab === 'addresses' ? 'mobile-touch-card-active' : ''}`}
+                >
+                  <span>Saved Addresses</span>
+                  <Icons.ArrowRight size={15} />
+                </button>
+
+                <button
+                  onClick={() => { setActiveTab('profile'); setMobileDrawerOpen(false); }}
+                  className="mobile-touch-card"
+                >
+                  <span>Payment Methods</span>
+                  <Icons.ArrowRight size={15} />
+                </button>
+
+                <button
+                  onClick={() => { setActiveTab('profile'); setMobileDrawerOpen(false); }}
+                  className="mobile-touch-card"
+                >
+                  <span>Notifications</span>
+                  <Icons.ArrowRight size={15} />
+                </button>
+
+                <button
+                  onClick={() => { setActiveTab('support'); setMobileDrawerOpen(false); }}
+                  className={`mobile-touch-card ${activeTab === 'support' ? 'mobile-touch-card-active' : ''}`}
+                >
+                  <span>Support Desk</span>
+                  <Icons.ArrowRight size={15} />
+                </button>
+
+                <div className="h-[1px] bg-royal-gold/10 my-2" />
+
+                <button
+                  onClick={() => { setMobileDrawerOpen(false); logout(); router.push('/'); }}
+                  className="mobile-touch-card mobile-touch-card-danger"
+                >
+                  <span>Logout Portal</span>
+                  <Icons.ArrowRight size={15} />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* LEFT COLUMN: LUXURY NAVIGATION SIDEBAR (DESKTOP > 1024px / > 768px) */}
+        <div className="hidden md:block profile-glass-card p-6 md:sticky md:top-28 z-20 space-y-6">
           <div className="text-center space-y-2 border-b border-royal-gold/10 pb-4">
             <div className="w-16 h-16 rounded-full border border-royal-gold/30 mx-auto overflow-hidden bg-deep-charcoal flex items-center justify-center relative">
               {user?.profilePhoto ? (

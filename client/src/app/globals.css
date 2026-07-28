@@ -217,6 +217,54 @@ input:focus-visible {
   color: transparent;
 }
 
+/* --- MOBILE ACCOUNT DRAWER & TOUCH CARDS --- */
+.mobile-touch-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 58px;
+  padding: 0 1.25rem;
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(201, 168, 76, 0.16);
+  color: var(--ivory);
+  font-family: var(--font-jost), sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.mobile-touch-card:hover,
+.mobile-touch-card:active {
+  background: rgba(201, 168, 76, 0.12);
+  border-color: rgba(201, 168, 76, 0.4);
+  color: var(--royal-gold);
+  transform: translateY(-1px);
+}
+
+.mobile-touch-card-active {
+  background: rgba(201, 168, 76, 0.15) !important;
+  border-color: var(--royal-gold) !important;
+  color: var(--royal-gold) !important;
+}
+
+.mobile-touch-card-danger {
+  border-color: rgba(235, 87, 87, 0.25) !important;
+  color: #ff6b81 !important;
+}
+
+.mobile-touch-card-danger:hover,
+.mobile-touch-card-danger:active {
+  background: rgba(235, 87, 87, 0.12) !important;
+  border-color: rgba(235, 87, 87, 0.5) !important;
+  color: #ff4757 !important;
+}
+
 .sacred-link {
   display: inline-flex;
   align-items: center;

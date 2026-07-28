@@ -188,9 +188,23 @@ export default function Navbar() {
 
               {accountOpen && (
                   <div
-                    className="luxury-popover absolute right-0 top-[calc(100%+14px)] animate-fade-down w-[min(92vw,390px)] overflow-hidden rounded-[2rem] border border-royal-gold/20 bg-[#100d09]/88 p-4 text-cream shadow-[0_32px_90px_rgba(0,0,0,.48)] backdrop-blur-2xl"
+                    className="luxury-popover fixed inset-y-0 right-0 z-[100] w-full max-w-full sm:max-w-[420px] h-full overflow-y-auto bg-[#100d09]/95 backdrop-blur-2xl border-l border-royal-gold/25 p-6 pb-28 text-cream shadow-[0_32px_90px_rgba(0,0,0,.75)] md:absolute md:inset-auto md:right-0 md:top-[calc(100%+14px)] md:w-[390px] md:h-auto md:max-h-[85vh] md:rounded-[2rem] md:border md:p-5 md:pb-6 animate-fade-in"
                   >
-                    <div className="absolute inset-0 temple-grain opacity-20" />
+                    <div className="absolute inset-0 temple-grain opacity-20 pointer-events-none" />
+
+                    {/* MOBILE DRAWER HEADER CLOSE BUTTON */}
+                    <div className="flex items-center justify-between border-b border-royal-gold/15 pb-4 mb-4 md:hidden">
+                      <span className="font-display text-lg tracking-[0.15em] text-ivory">PREM DHAGA ACCOUNT</span>
+                      <button
+                        type="button"
+                        onClick={closeOverlays}
+                        className="w-9 h-9 rounded-full border border-royal-gold/20 flex items-center justify-center text-warm-beige/60 hover:text-royal-gold transition-colors"
+                        aria-label="Close account menu"
+                      >
+                        <Icons.Close size={18} />
+                      </button>
+                    </div>
+
                     <div className="relative space-y-4">
                       {!isLoggedIn ? (
                         <>
@@ -201,45 +215,45 @@ export default function Navbar() {
                             </p>
                           </div>
 
-                          <div className="grid gap-2">
-                            <button type="button" onClick={() => openAuth('login')} className="account-action">
+                          <div className="grid gap-3">
+                            <button type="button" onClick={() => openAuth('login')} className="mobile-touch-card">
                               <span>Sign In with Credentials</span>
-                              <span>Login</span>
+                              <Icons.ArrowRight size={15} />
                             </button>
-                            <button type="button" onClick={() => openAuth('register')} className="account-action">
+                            <button type="button" onClick={() => openAuth('register')} className="mobile-touch-card">
                               <span>Create Devotional ID</span>
-                              <span>Register</span>
+                              <Icons.ArrowRight size={15} />
                             </button>
                           </div>
 
-                          <div className="grid grid-cols-2 gap-2">
-                            <Link href="/register" onClick={closeOverlays} className="account-mini-link">Register ID</Link>
-                            <Link href="/login" onClick={closeOverlays} className="account-mini-link">Sign In</Link>
-                            <Link href="/checkout" onClick={closeOverlays} className="account-mini-link">Checkout</Link>
-                            <Link href="/collections" onClick={closeOverlays} className="account-mini-link">Browse Offerings</Link>
+                          <div className="grid grid-cols-2 gap-2 pt-2">
+                            <Link href="/register" onClick={closeOverlays} className="account-mini-link text-center py-2.5">Register ID</Link>
+                            <Link href="/login" onClick={closeOverlays} className="account-mini-link text-center py-2.5">Sign In</Link>
+                            <Link href="/checkout" onClick={closeOverlays} className="account-mini-link text-center py-2.5">Checkout</Link>
+                            <Link href="/collections" onClick={closeOverlays} className="account-mini-link text-center py-2.5">Browse Offerings</Link>
                           </div>
                         </>
                       ) : (
                         <>
-                          <div className="rounded-[1.4rem] border border-royal-gold/15 bg-gradient-to-br from-royal-gold/12 via-white/[0.03] to-peacock-blue/10 p-5">
+                          <div className="rounded-[1.4rem] border border-royal-gold/20 bg-gradient-to-br from-royal-gold/15 via-white/[0.03] to-peacock-blue/10 p-5 shadow-inner">
                             <div className="flex items-center gap-4">
-                              <div className="grid h-14 w-14 place-items-center rounded-full border border-royal-gold/40 bg-royal-gold/15 font-display text-2xl text-royal-gold">
+                              <div className="grid h-14 w-14 place-items-center rounded-full border-2 border-royal-gold/40 bg-royal-gold/15 font-display text-2xl text-royal-gold shadow-md shrink-0">
                                 {initials || 'PD'}
                               </div>
-                              <div>
-                                <p className="font-display text-2xl text-ivory">Radhe Radhe, {displayName}</p>
-                                <p className="font-utility text-[9px] uppercase tracking-[0.24em] text-royal-gold/80">
+                              <div className="min-w-0 flex-1">
+                                <p className="font-display text-xl sm:text-2xl text-ivory truncate">Radhe Radhe, {displayName}</p>
+                                <p className="font-utility text-[9px] uppercase tracking-[0.24em] text-royal-gold/90 mt-0.5">
                                   {1080 + cartCount * 8} seva loyalty points
                                 </p>
                               </div>
                             </div>
-                            <div className="mt-4 rounded-2xl border border-royal-gold/10 bg-temple-black/35 p-3">
+                            <div className="mt-4 rounded-2xl border border-royal-gold/10 bg-temple-black/40 p-3">
                               <p className="font-utility text-[8px] uppercase tracking-[0.25em] text-cream/40">Recent order</p>
                               <p className="mt-1 font-body text-xs text-cream/70">PD-108 / Preparing in Vrindavan Atelier</p>
                             </div>
                           </div>
 
-                          <div className="grid gap-2">
+                          <div className="grid gap-2.5 pt-1">
                             {[
                               ['My Profile', '/account'],
                               ['My Orders', '/account'],
@@ -248,11 +262,11 @@ export default function Navbar() {
                               ['Saved Addresses', '/account'],
                               ['Payment Methods', '/account'],
                               ['Notifications', '/account'],
-                              ['Support', '/account'],
+                              ['Support Desk', '/account'],
                             ].map(([label, href]) => (
-                              <Link key={label} href={href} onClick={closeOverlays} className="account-action">
+                              <Link key={label} href={href} onClick={closeOverlays} className="mobile-touch-card">
                                 <span>{label}</span>
-                                <Icons.ArrowRight size={13} />
+                                <Icons.ArrowRight size={15} />
                               </Link>
                             ))}
                             <button
@@ -261,10 +275,10 @@ export default function Navbar() {
                                 logout();
                                 closeOverlays();
                               }}
-                              className="account-action !border-lotus-pink/20 !text-lotus-pink hover:!border-lotus-pink/45"
+                              className="mobile-touch-card mobile-touch-card-danger"
                             >
                               <span>Logout</span>
-                              <span>Secure</span>
+                              <Icons.ArrowRight size={15} />
                             </button>
                           </div>
                         </>
